@@ -102,6 +102,14 @@ public class TreeOperationsService {
         return f.first()
     }
 
+    private Node findSingleNslInstance(Arrangement a, Instance instance, String msg) {
+        if (!instance) return null
+        Collection<Node> f = queryService.findCurrentNslInstance(a, instance)
+        if (f.isEmpty()) raise makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [a, instance, msg])
+        if (f.size() > 1) raise makeMsg(Msg.THING_FOUND_IN_ARRANGEMENT_MULTIPLE_TIMES, [a, instance, msg])
+        return f.first()
+    }
+
     private void checkCurrentNameNotInTree(Arrangement a, Uri uri, String msg) {
         if (!uri) return
         Collection<Node> f = queryService.findCurrentName(a, uri)
@@ -804,7 +812,7 @@ public class TreeOperationsService {
 
                 Node existingNode = findSingleName(arrangement, nameUri, 'name')
 
-                deleteNameFromClassification(existingNode, tempSpace, existingReplacement, nameUri.toString(), arrangement, authUser)
+                deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
             }
         }
     }
@@ -834,15 +842,14 @@ public class TreeOperationsService {
 
                 Node existingNode = findSingleNslName(arrangement, name, 'name')
 
-                deleteNameFromClassification(existingNode, tempSpace, existingReplacement, name.id.toString(), arrangement, authUser)
+                deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
             }
         }
     }
 
-    private void deleteNameFromClassification(Node existingNode,
+    private void deleteNodeFromClassification(Node existingNode,
                                               Arrangement tempSpace,
                                               Node existingReplacement,
-                                              String nameID,
                                               Arrangement arrangement,
                                               String authUser) {
 
@@ -855,13 +862,44 @@ public class TreeOperationsService {
         v.put(existingMoveFrom, moveFromCheckout)
         v.put(existingNode, existingReplacement ?: DomainUtils.getEndNode())
 
-        Event e = basicOperationsService.newEvent("removeNslName ${nameID}", authUser)
+        Event e = basicOperationsService.newEvent("remove NSL node ${existingNode.id}", authUser)
 
         basicOperationsService.persistNode e, tempSpace.node
         versioningService.performVersioning e, v, arrangement
         basicOperationsService.moveFinalNodesFromTreeToTree tempSpace, arrangement
         basicOperationsService.deleteArrangement tempSpace
     }
+
+    @SuppressWarnings("GroovyUnusedDeclaration")
+    void deleteNslInstance(Arrangement arrangement, Instance instance, Instance replacementInstance) {
+        deleteNslInstance(arrangement, instance, replacementInstance, null)
+    }
+
+    void deleteNslInstance(Arrangement arrangement, Instance instance, Instance replacementInstance, String authUser) {
+
+        mustHave(arrangement: arrangement, name: instance) {
+            clearAndFlush {
+                arrangement = DomainUtils.refetchArrangement(arrangement)
+                instance = DomainUtils.refetchInstance(instance)
+                replacementInstance = DomainUtils.refetchInstance(replacementInstance)
+
+                checkArrangementIsTree(arrangement)
+
+                Node existingReplacement = findSingleNslInstance(arrangement, replacementInstance, 'replacement instance')
+                if (replacementInstance && !existingReplacement) {
+                    // this never happens - findSingleName throws an exception if the name is not found
+                    throw new IllegalArgumentException("replacement instance ${replacementInstance.id} not found")
+                }
+
+                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+
+                Node existingNode = findSingleNslInstance(arrangement, instance, 'instance')
+
+                deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
+            }
+        }
+    }
+
 
     @SuppressWarnings("GroovyUnusedDeclaration")
     void setProfileData(Arrangement arrangement, Uri nameUri, Uri property, Uri datatype, String data) {

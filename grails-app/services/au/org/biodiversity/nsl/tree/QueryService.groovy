@@ -570,7 +570,7 @@ select distinct start_id from ll where supernode_id = ?
                         }
 
                     }
-        }
+        } as Link
     }
 
     // This method returns a branch object. A branch object contains a top node, its placements, and its entire subnode tree.

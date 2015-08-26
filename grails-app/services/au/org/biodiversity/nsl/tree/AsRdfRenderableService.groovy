@@ -85,7 +85,7 @@ class AsRdfRenderableService {
         return o
     }
 
-    public RdfRenderable.Top serviceExceptionAsRenderable(ServiceException ex, Closure messageParamTransform = null) {
+    public RdfRenderable.Top serviceExceptionAsRenderable(ServiceException ex) {
         UriNs errorNs = DomainUtils.getBlankNs()
         RdfRenderable.Obj o = new RdfRenderable.Obj(DomainUtils.u(errorNs, ex.class.simpleName))
         RdfRenderable.Seq stackTrace = new RdfRenderable.Seq()
@@ -108,17 +108,17 @@ class AsRdfRenderableService {
             if (ee.getMethodName()) oo.add DomainUtils.u(errorNs, 'methodName'), ee.getMethodName()
         }
 
-        o.add DomainUtils.u(errorNs, 'message'), messageAsRenderable(ex.msg, messageParamTransform)
+        o.add DomainUtils.u(errorNs, 'message'), messageAsRenderable(ex.msg)
 
         return o
     }
 
-    public RdfRenderable.Top messageAsRenderable(Message m, Closure messageParamTransform = null) {
+    public RdfRenderable.Top messageAsRenderable(Message m) {
         UriNs messageNs = DomainUtils.getBlankNs()
         RdfRenderable.Obj o = new RdfRenderable.Obj(DomainUtils.u(messageNs, 'Message'))
 
-        o.add DomainUtils.uri('rdfs', 'label'), m.msg.name()
-        o.add DomainUtils.uri('dcterms', 'title'), m.getCustomisedString(messageParamTransform)
+        o.add(DomainUtils.uri('rdfs', 'label'), m.msg.name())
+        o.add(DomainUtils.uri('dcterms', 'title'), m.getLocalisedString())
 
         o.add DomainUtils.u(messageNs, 'messageKey'), m.msg.getKey()
 
@@ -128,30 +128,53 @@ class AsRdfRenderableService {
         o.add DomainUtils.u(messageNs, 'nested'), nested
 
         for (Object oo : m.args) {
-            if (oo instanceof Node) {
-                args.add getNodeRdf(Node.get(((Node) oo).id))
-            } else if (oo instanceof Link) {
-                args.add getLinkRdf(Link.get(((Link) oo).id))
-            } else if (oo instanceof Arrangement) {
-                if (((Arrangement) oo).arrangementType.isTree()) {
-                    args.add getClassificationRdf(Arrangement.get(((Arrangement) oo).id))
-                } else {
-                    args.add getArrangementRdf(Arrangement.get(((Arrangement) oo).id))
-                }
-            } else if (oo instanceof Message) {
-                args.add messageAsRenderable((Message) oo)
-            } else if (oo instanceof Uri) {
-                args.add new RdfRenderable.Resource((Uri) oo)
-            } else {
+            if(RdfRenderable.Primitive.isPrimative(oo)) {
+                //noinspection GroovyAssignabilityCheck
                 args.add new RdfRenderable.Primitive(oo)
+            } else {
+                try {
+                    //noinspection GroovyAssignabilityCheck
+                    addToArgs(args, oo)
+                } catch (MissingMethodException e1) {
+                    log.warn("RdfRenderable tryed to add arg for type $oo ($e1.message)")
+                }
             }
         }
 
-        for (Message oo : m.nested) {
-            nested.add messageAsRenderable(oo)
+        for (Object perhapsAMessage : m.nested) {
+            if(perhapsAMessage instanceof Message){
+                nested.add messageAsRenderable(perhapsAMessage as Message)
+            }
         }
 
         return o
+    }
+
+    private addToArgs(RdfRenderable.Seq args, Node node) {
+        node.refresh()
+        args.add(getNodeRdf(node))
+    }
+
+    private addToArgs(RdfRenderable.Seq args, Link link) {
+        link.refresh()
+        args.add(getLinkRdf(link))
+    }
+
+    private addToArgs(RdfRenderable.Seq args, Arrangement arrangement) {
+        arrangement.refresh()
+        if (arrangement.arrangementType.isTree()) {
+            args.add(getClassificationRdf(arrangement))
+        } else {
+            args.add(getArrangementRdf(arrangement))
+        }
+    }
+
+    private addToArgs(RdfRenderable.Seq args, Message message) {
+        args.add(messageAsRenderable(message))
+    }
+
+    private addToArgs(RdfRenderable.Seq args, Uri uri) {
+        args.add(new RdfRenderable.Resource(uri))
     }
 
     ///////////////////////////////////////////////////////////////////////////////

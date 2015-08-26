@@ -135,7 +135,7 @@ class VersioningService {
                     // basic argument checks.
 
                     boolean versioningValidityCheckFailed = false // just because I don't trust you
-                    List<?> versioningValidityCheckFailures = []
+                    List<Message> versioningValidityCheckFailures = []
 
                     log.debug "looking for non-current nodes being replaced"
 
