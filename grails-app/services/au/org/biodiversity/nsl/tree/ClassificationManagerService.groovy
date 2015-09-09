@@ -76,9 +76,9 @@ class ClassificationManagerService {
 
         } else if (params.copyNameIn) {
             Arrangement copyNameIn = params.copyNameIn as Arrangement;
-            copyNode = DomainUtils.getSingleSubnode(copyNameIn.node);
+            copyNodes = DomainUtils.getSingleSubnode(copyNameIn.node);
         } else {
-            copyNode = null;
+            copyNodes = null;
         }
 
         Event e = basicOperationsService.newEvent("Creating classification ${params.label}")
