@@ -76,7 +76,7 @@ class ClassificationManagerService {
 
         } else if (params.copyNameIn) {
             Arrangement copyNameIn = params.copyNameIn as Arrangement;
-            copyNodes = DomainUtils.getSingleSubnode(copyNameIn.node);
+            copyNodes = [ DomainUtils.getSingleSubnode(copyNameIn.node) ];
         } else {
             copyNodes = null;
         }
