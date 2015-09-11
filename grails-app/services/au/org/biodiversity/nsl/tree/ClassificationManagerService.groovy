@@ -167,4 +167,9 @@ class ClassificationManagerService {
         return pointer != null
     }
 
+    def validateClassifications() {
+        Date d = new Date();
+        return "validateClassifications results at ${d}"
+    }
+
 }
