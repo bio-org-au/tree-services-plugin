@@ -187,13 +187,125 @@ class ClassificationManagerService {
     private validate(String label) {
         def results = [];
 
+        results.addAll(validate_replacedat_matches_nextnode(label));
+        results.addAll(validate_current_nodes_child_of_current_node(label));
         results.addAll(validate_names_appear_once(label));
         results.addAll(validate_instances_appear_once(label));
 
         return results;
     }
 
-     private validate_names_appear_once(String label) {
+
+    private validate_replacedat_matches_nextnode(String label) {
+        def result = []
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+        try {
+            def ct = sql.firstRow("""
+select count(*) as ct
+from
+  tree_arrangement a
+  join tree_node n on a.id = n.tree_arrangement_id
+where
+  a.label = '${label}'
+  and (
+    (n.next_node_id is null and n.replaced_at_id is not null)
+    or
+    (n.next_node_id is not null and n.replaced_at_id is null)
+  )
+            """).ct
+
+            if(ct > 0) {
+                result << "There are ${ct} nodes where replaced_at does not match next_node"
+
+                sql.eachRow("""
+select n.id, n.next_node_id, n.replaced_at_id
+from
+  tree_arrangement a
+  join tree_node n on a.id = n.tree_arrangement_id
+where
+  a.label = '${label}'
+  and (
+    (n.next_node_id is null and n.replaced_at_id is not null)
+    or
+    (n.next_node_id is not null and n.replaced_at_id is null)
+  )
+LIMIT 5
+            """) {
+                    result << "Node ${it.id} has a next node ${it.next_node_id?:'null'} and a replaced at of ${it.replaced_at_id?:'null'}"
+                }
+
+            }
+        }
+        finally {
+            sql.close();
+        }
+
+        return result
+    }
+
+    private validate_current_nodes_child_of_current_node(String label) {
+        def result = []
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+        try {
+            def ct = sql.firstRow("""
+select count(*) as ct
+from
+  tree_arrangement a
+  join tree_node n on a.id = n.tree_arrangement_id
+where
+  a.label = '${label}'
+  and n.next_node_id is null
+  and n.internal_type in ('T','D')
+  and not exists (
+    select pn.id
+    from tree_link l
+    join tree_node pn on l.supernode_id = pn.id
+    join tree_arrangement pa on pn.tree_arrangement_id = pa.id
+    where l.subnode_id = n.id
+      and pa.label='${label}'
+      and pn.next_node_id is null
+  )
+LIMIT 5
+            """).ct
+
+            if(ct > 0) {
+                result << "There are ${ct} nodes which are current but have no current parent node"
+
+                sql.eachRow("""
+select n.id
+from
+  tree_arrangement a
+  join tree_node n on a.id = n.tree_arrangement_id
+where
+  a.label = '${label}'
+  and n.next_node_id is null
+  and n.internal_type in ('T','D')
+  and not exists (
+    select pn.id
+    from tree_link l
+    join tree_node pn on l.supernode_id = pn.id
+    join tree_arrangement pa on pn.tree_arrangement_id = pa.id
+    where l.subnode_id = n.id
+      and pa.label='${label}'
+      and pn.next_node_id is null
+  )
+LIMIT 5
+            """) {
+                    result << "Node ${it.id} is current but has no current parent node"
+                }
+
+            }
+        }
+        finally {
+            sql.close();
+        }
+
+        return result
+    }
+
+    private validate_names_appear_once(String label) {
         def result = []
 
         Sql sql = Sql.newInstance(dataSource_nsl);
