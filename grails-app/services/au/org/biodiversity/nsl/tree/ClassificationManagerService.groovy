@@ -18,12 +18,16 @@ package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.*
 import grails.transaction.Transactional
+import groovy.sql.Sql
+
+import javax.sql.DataSource
 
 @Transactional(rollbackFor = [ServiceException])
 class ClassificationManagerService {
     TreeOperationsService treeOperationsService;
     BasicOperationsService basicOperationsService;
     VersioningService versioningService;
+    DataSource dataSource_nsl;
 
     void createClassification(Map params = [:]) throws ServiceException {
         // todo - use Peter's "must have" thing
@@ -183,16 +187,106 @@ class ClassificationManagerService {
     private validate(String label) {
         def results = [];
 
-        results.addAll(validate_test(label));
+        results.addAll(validate_names_appear_once(label));
+        results.addAll(validate_instances_appear_once(label));
 
         return results;
     }
 
-    private validate_test(String label) {
-        return [
-                'test result',
-                'another test result'
-        ];
+     private validate_names_appear_once(String label) {
+        def result = []
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+        try {
+            def ct = sql.firstRow("""
+select count(*) as ct from (
+  select n.name_id, count(*) as ct
+  from
+    tree_arrangement a
+    join tree_node n on a.id = n.tree_arrangement_id
+  where
+    a.label = '${label}'
+    and n.name_id is not null
+    and n.next_node_id is null
+  group by n.name_id
+  having count(*) > 1
+) as multiname
+            """).ct
+
+            if(ct > 0) {
+                result << "There are ${ct} names appearing multiple times"
+
+                sql.eachRow("""
+  select n.name_id, count(*) as ct
+  from
+    tree_arrangement a
+    join tree_node n on a.id = n.tree_arrangement_id
+  where
+    a.label = '${label}'
+    and n.name_id is not null
+    and n.next_node_id is null
+  group by n.name_id
+  having count(*) > 1
+  LIMIT 5
+            """) {
+                    result << "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})"
+                }
+
+            }
+        }
+        finally {
+            sql.close();
+        }
+
+         return result
     }
 
+    private validate_instances_appear_once(String label) {
+        def result = []
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+        try {
+            def ct = sql.firstRow("""
+select count(*) as ct from (
+  select n.instance_id, count(*) as ct
+  from
+    tree_arrangement a
+    join tree_node n on a.id = n.tree_arrangement_id
+  where
+    a.label = '${label}'
+    and n.instance_id is not null
+    and n.next_node_id is null
+  group by n.instance_id
+  having count(*) > 1
+) as multiname
+            """).ct
+
+            if(ct > 0) {
+                result << "There are ${ct} instances appearing multiple times"
+
+                sql.eachRow("""
+  select n.instance_id, count(*) as ct
+  from
+    tree_arrangement a
+    join tree_node n on a.id = n.tree_arrangement_id
+  where
+    a.label = '${label}'
+    and n.instance_id is not null
+    and n.next_node_id is null
+  group by n.instance_id
+  having count(*) > 1
+  LIMIT 5
+            """) {
+                    Instance i = Instance.get(it.instance_id)
+                    result << "${i.name.fullName} in ${i.reference.title} ${i.reference?.author?.name} appears ${it.ct} times (instance id: ${it.instance_id})"
+                }
+
+            }
+        }
+        finally {
+            sql.close();
+        }
+
+        return result
+    }
 }
