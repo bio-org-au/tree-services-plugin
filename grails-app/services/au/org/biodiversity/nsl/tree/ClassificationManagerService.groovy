@@ -168,8 +168,31 @@ class ClassificationManagerService {
     }
 
     def validateClassifications() {
-        Date d = new Date();
-        return "validateClassifications results at ${d}"
+        def validationResults = [:];
+        validationResults.time = new Date();
+
+        validationResults.c = [:];
+
+        Arrangement.findAll { arrangementType == ArrangementType.P} .each {
+            validationResults.c[it.label] = validate(it.label)
+        }
+
+        return validationResults
+    }
+
+    private validate(String label) {
+        def results = [];
+
+        results.addAll(validate_test(label));
+
+        return results;
+    }
+
+    private validate_test(String label) {
+        return [
+                'test result',
+                'another test result'
+        ];
     }
 
 }
