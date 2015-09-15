@@ -46,7 +46,9 @@ class ClassificationManagerService {
             String copyName = params.copyName as String;
             Arrangement copyNameIn = params.copyNameIn as Arrangement;
 
-            copyNodes = Node.findAll { root == copyNameIn && (name.simpleName == copyName || name.fullName == copyName) && checkedInAt != null && replacedAt == null }
+            copyNodes = Node.findAll {
+                root == copyNameIn && (name.simpleName == copyName || name.fullName == copyName) && checkedInAt != null && replacedAt == null
+            }
             int count = copyNodes.size();
 
             if (count == 0) {
@@ -80,7 +82,7 @@ class ClassificationManagerService {
 
         } else if (params.copyNameIn) {
             Arrangement copyNameIn = params.copyNameIn as Arrangement;
-            copyNodes = [ DomainUtils.getSingleSubnode(copyNameIn.node) ];
+            copyNodes = [DomainUtils.getSingleSubnode(copyNameIn.node)];
         } else {
             copyNodes = null;
         }
@@ -177,7 +179,7 @@ class ClassificationManagerService {
 
         validationResults.c = [:];
 
-        Arrangement.findAll { arrangementType == ArrangementType.P} .each {
+        Arrangement.findAll { arrangementType == ArrangementType.P }.each {
             validationResults.c[it.label] = validate(it.label)
         }
 
@@ -215,8 +217,9 @@ where
   )
             """).ct
 
-            if(ct > 0) {
-                result << "There are ${ct} nodes where replaced_at does not match next_node"
+            if (ct > 0) {
+                def msg = [msg: "There are ${ct} nodes where replaced_at does not match next_node", level: 'danger', nested: []]
+                result << msg
 
                 sql.eachRow("""
 select n.id, n.next_node_id, n.replaced_at_id
@@ -232,7 +235,7 @@ where
   )
 LIMIT 5
             """) {
-                    result << "Node ${it.id} has a next node ${it.next_node_id?:'null'} and a replaced at of ${it.replaced_at_id?:'null'}"
+                    msg.nested << [msg: "Node ${it.id} has a next node ${it.next_node_id ?: 'null'} and a replaced at of ${it.replaced_at_id ?: 'null'}", level: 'danger']
                 }
 
             }
@@ -270,8 +273,9 @@ where
 LIMIT 5
             """).ct
 
-            if(ct > 0) {
-                result << "There are ${ct} nodes which are current but have no current parent node"
+            if (ct > 0) {
+                def msg = [msg: "There are ${ct} nodes which are current but have no current parent node", level: 'danger', nested: []]
+                result << msg
 
                 sql.eachRow("""
 select n.id
@@ -293,7 +297,7 @@ where
   )
 LIMIT 5
             """) {
-                    result << "Node ${it.id} is current but has no current parent node"
+                    msg.nested << [msg: "Node ${it.id} is current but has no current parent node", level: 'danger']
                 }
 
             }
@@ -325,8 +329,9 @@ select count(*) as ct from (
 ) as multiname
             """).ct
 
-            if(ct > 0) {
-                result << "There are ${ct} names appearing multiple times"
+            if (ct > 0) {
+                def msg = [msg: "There are ${ct} names appearing multiple times", level: 'warning', nested: []]
+                result << msg
 
                 sql.eachRow("""
   select n.name_id, count(*) as ct
@@ -341,7 +346,7 @@ select count(*) as ct from (
   having count(*) > 1
   LIMIT 5
             """) {
-                    result << "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})"
+                    msg.nested << [msg: "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})", level: 'warning']
                 }
 
             }
@@ -350,7 +355,7 @@ select count(*) as ct from (
             sql.close();
         }
 
-         return result
+        return result
     }
 
     private validate_instances_appear_once(String label) {
@@ -373,8 +378,9 @@ select count(*) as ct from (
 ) as multiname
             """).ct
 
-            if(ct > 0) {
-                result << "There are ${ct} instances appearing multiple times"
+            if (ct > 0) {
+                def msg = [msg: "There are ${ct} instances appearing multiple times", level: 'warning', nested: []]
+                result << msg
 
                 sql.eachRow("""
   select n.instance_id, count(*) as ct
@@ -390,7 +396,7 @@ select count(*) as ct from (
   LIMIT 5
             """) {
                     Instance i = Instance.get(it.instance_id)
-                    result << "${i.name.fullName} in ${i.reference.title} ${i.reference?.author?.name} appears ${it.ct} times (instance id: ${it.instance_id})"
+                    msg.nested << [msg: "${i.name.fullName} in ${i.reference.title} ${i.reference?.author?.name} appears ${it.ct} times (instance id: ${it.instance_id})", level: 'warning']
                 }
 
             }
