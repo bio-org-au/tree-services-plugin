@@ -29,6 +29,20 @@ class ClassificationManagerService {
     VersioningService versioningService;
     DataSource dataSource_nsl;
 
+    /**
+     * Possible resultEnums returned by the validation result.
+     */
+    public static enum ValidationResult {
+        /** param bundle will be [classification, nodeId] */
+        BAD_REPLACEDAT,
+        /** param bundle will be [classification, nodeId] */
+                CURRENT_NO_PARENT,
+        /** param bundle will be [classification, nameId] */
+                NAME_APPEARS_TWICE,
+        /** param bundle will be [classification, instanceId] */
+                INSTANCE_APPEARS_TWICE
+    }
+
     void createClassification(Map params = [:]) throws ServiceException {
         // todo - use Peter's "must have" thing
         if (!params.label) throw new IllegalArgumentException("label must be specified");
@@ -209,13 +223,13 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = '${label}'
+  a.label = ?
   and (
     (n.next_node_id is null and n.replaced_at_id is not null)
     or
     (n.next_node_id is not null and n.replaced_at_id is null)
   )
-            """).ct
+            """, [label]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} nodes where replaced_at does not match next_node", level: 'danger', nested: []]
@@ -227,15 +241,20 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = '${label}'
+  a.label = ?
   and (
     (n.next_node_id is null and n.replaced_at_id is not null)
     or
     (n.next_node_id is not null and n.replaced_at_id is null)
   )
 LIMIT 5
-            """) {
-                    msg.nested << [msg: "Node ${it.id} has a next node ${it.next_node_id ?: 'null'} and a replaced at of ${it.replaced_at_id ?: 'null'}", level: 'danger']
+            """, [label]) {
+                    msg.nested << [
+                            msg   : "Node ${it.id} has a next node ${it.next_node_id ?: 'null'} and a replaced at of ${it.replaced_at_id ?: 'null'}",
+                            level : 'danger',
+                            type  : ValidationResult.BAD_REPLACEDAT,
+                            params: [classification: label, nodeId: it.id]
+                    ]
                 }
 
             }
@@ -258,20 +277,19 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = '${label}'
+  a.label = ?
   and n.next_node_id is null
   and n.internal_type in ('T','D')
   and not exists (
     select pn.id
     from tree_link l
     join tree_node pn on l.supernode_id = pn.id
-    join tree_arrangement pa on pn.tree_arrangement_id = pa.id
     where l.subnode_id = n.id
-      and pa.label='${label}'
+      and pn.tree_arrangement_id=n.tree_arrangement_id
       and pn.next_node_id is null
   )
 LIMIT 5
-            """).ct
+            """, [label]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} nodes which are current but have no current parent node", level: 'danger', nested: []]
@@ -290,14 +308,18 @@ where
     select pn.id
     from tree_link l
     join tree_node pn on l.supernode_id = pn.id
-    join tree_arrangement pa on pn.tree_arrangement_id = pa.id
     where l.subnode_id = n.id
-      and pa.label='${label}'
+      and pn.tree_arrangement_id=n.tree_arrangement_id
       and pn.next_node_id is null
   )
 LIMIT 5
-            """) {
-                    msg.nested << [msg: "Node ${it.id} is current but has no current parent node", level: 'danger']
+            """, [label]) {
+                    msg.nested << [
+                            msg   : "Node ${it.id} is current but has no current parent node",
+                            level : 'danger',
+                            type  : ValidationResult.CURRENT_NO_PARENT,
+                            params: [classification: label, nodeId: it.id]
+                    ]
                 }
 
             }
@@ -321,13 +343,13 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = '${label}'
+    a.label = ?
     and n.name_id is not null
     and n.next_node_id is null
   group by n.name_id
   having count(*) > 1
 ) as multiname
-            """).ct
+            """, [label]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} names appearing multiple times", level: 'warning', nested: []]
@@ -339,14 +361,18 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = '${label}'
+    a.label = ?
     and n.name_id is not null
     and n.next_node_id is null
   group by n.name_id
   having count(*) > 1
   LIMIT 5
-            """) {
-                    msg.nested << [msg: "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})", level: 'warning']
+            """, [label]) {
+                    msg.nested << [msg   : "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})",
+                                   level : 'warning',
+                                   type  : ValidationResult.NAME_APPEARS_TWICE,
+                                   params: [classification: label, nameId: it.name_id]
+                    ]
                 }
 
             }
@@ -370,13 +396,13 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = '${label}'
+    a.label = ?
     and n.instance_id is not null
     and n.next_node_id is null
   group by n.instance_id
   having count(*) > 1
 ) as multiname
-            """).ct
+            """, [label]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} instances appearing multiple times", level: 'warning', nested: []]
@@ -388,15 +414,20 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = '${label}'
+    a.label = ?
     and n.instance_id is not null
     and n.next_node_id is null
   group by n.instance_id
   having count(*) > 1
   LIMIT 5
-            """) {
+            """, [label]) {
                     Instance i = Instance.get(it.instance_id)
-                    msg.nested << [msg: "${i.name.fullName} in ${i.reference.title} ${i.reference?.author?.name} appears ${it.ct} times (instance id: ${it.instance_id})", level: 'warning']
+                    msg.nested << [
+                            msg   : "${i.name.fullName} in ${i.reference.title} ${i.reference?.author?.name} appears ${it.ct} times (instance id: ${it.instance_id})",
+                            level : 'warning',
+                            type  : ValidationResult.INSTANCE_APPEARS_TWICE,
+                            params: [classification: label, instanceId: it.instance_id]
+                    ]
                 }
 
             }
