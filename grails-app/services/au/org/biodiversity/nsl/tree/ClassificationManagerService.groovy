@@ -438,4 +438,15 @@ select count(*) as ct from (
 
         return result
     }
+
+    void fixClassificationUseNodeForName(Arrangement classification, Name name, Node node) {
+        if(!classification) throw new IllegalArgumentException('classification cannot be null');
+        if(!name) throw new IllegalArgumentException('name cannot be null');
+        if(!node) throw new IllegalArgumentException('node cannot be null');
+        if(node.root != classification) throw new IllegalArgumentException('node root must match classification');
+        if(node.name != name) throw new IllegalArgumentException('node name must match name');
+
+
+
+    }
 }
