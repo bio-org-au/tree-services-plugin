@@ -30,6 +30,7 @@ import javax.sql.DataSource
 
 @Transactional(rollbackFor = [ServiceException])
 class ClassificationManagerService {
+    QueryService queryService;
     TreeOperationsService treeOperationsService;
     BasicOperationsService basicOperationsService;
     VersioningService versioningService;
@@ -456,7 +457,7 @@ select count(*) as ct from (
         // I'll store the ID because grails and hibernate and native sql play together so badly
 
         Collection<Long> nodesToZap = new HashSet<Long>(Node.findAllByRootAndNameAndReplacedAt(classification, name, null).findAll {
-            it != node
+            it.id != node.id
         }*.id);
 
         log.debug "want to keep ${node}"
@@ -468,76 +469,60 @@ select count(*) as ct from (
 
         log.debug "temp arrangement"
         Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
-        Map<Long, Long> versioning = new HashMap<Long, Long>();
 
-        /**
-         * Steps are:
-         * - adopt the node to be used and check out
-         * - Adopt all the parents of the nodes I want to zap and check out.
-         * - remove the nodes to be zapped from all the parents.
-         * - adopt all taxonomic node child nodes into the new node
-         * - persist.
-         * - version.
-         */
+        Link rootLink = basicOperationsService.adoptNode(Node.get(tempSpace.node.id), DomainUtils.getSingleSubnode(Arrangement.get(classification.id).node), VersioningMethod.F);
+        basicOperationsService.checkoutLink(Link.get(rootLink.id));
 
-        log.debug "new node"
-
-        Link newNodeLink = basicOperationsService.adoptNode(tempSpace.node, node, VersioningMethod.F)
-        basicOperationsService.checkoutLink(newNodeLink)
-        newNodeLink = DomainUtils.refetchLink(newNodeLink)
-        long newNodeId = newNodeLink.subnode.id;
-        versioning.put(node.id, newNodeId);
-
-
-        log.debug "zap nodes"
+        // ok. checkout the target node
+        Node checkedOutNode = basicOperationsService.checkoutNode(Node.get(tempSpace.node.id), Node.get(node.id));
 
         nodesToZap.each {
-            log.debug "zap ${Node.get(it)}"
-            Link currentLink = DomainUtils.getSingleCurrentSuperlinkInTree(Node.get(it));
-            log.debug "Current parent is ${currentLink.supernode}"
+            log.debug "zapping node ${it}"
 
-            // check out parent, if necessary
-            if (!versioning.containsKey(currentLink.supernode.id)) {
-                tempSpace = DomainUtils.refetchArrangement(tempSpace)
-                Link l = basicOperationsService.adoptNode(tempSpace.node, currentLink.supernode, VersioningMethod.F)
-                log.debug "Adopting ${currentLink.supernode}"
-                basicOperationsService.checkoutLink(l)
-                l = DomainUtils.refetchLink(l)
-                log.debug "New id for ${currentLink.supernode} is ${l.subnode}"
-                currentLink = DomainUtils.refetchLink(currentLink);
-                versioning.put(currentLink.supernode.id, l.subnode.id);
+            Link currentLink = DomainUtils.getSingleCurrentSuperlinkInTree(Node.get(it));
+
+            log.debug "link in tree is ${ll(currentLink)}"
+
+            Link parentLink = queryService.findNodeCurrentOrCheckedout(Node.get(tempSpace.node.id), Node.get(currentLink.supernode.id));
+
+            log.debug "parent linked in tempspace via ${ll(parentLink)}"
+
+            Node parentNode = parentLink.subnode;
+            log.debug "parent node is ${parentNode}"
+            if(parentNode.root.id != tempSpace.id) {
+                log.debug "parent node is not in tempspace, so checking it out"
+                parentNode = basicOperationsService.checkoutNode(Node.get(tempSpace.node.id), Node.get(parentNode.id));
+                log.debug "parent node checked out as ${parentNode}"
             }
 
+            log.debug "deleting link#${parentLink.linkSeq} from node parentNode.id"
             // remove node from the checked out parent
-            basicOperationsService.deleteLink(Node.get(versioning.get(currentLink.supernode.id)), currentLink.linkSeq)
+            basicOperationsService.deleteLink(Node.get(parentNode.id), parentLink.linkSeq)
 
             // adopt all taxonomic child nodes onto new chosen node
             Node.get(it).subLink.findAll { it.subnode.internalType == NodeInternalType.T }.each {
-                basicOperationsService.adoptNode(Node.get(newNodeId), it.subnode, it.versioningMethod, linkType: DomainUtils.getLinkTypeUri(it))
+                basicOperationsService.adoptNode(Node.get(checkedOutNode.id), Node.get(it.subnode.id), it.versioningMethod, linkType: DomainUtils.getLinkTypeUri(it))
             }
-
-            // kill the node
-            versioning.put(it, 0);
         }
 
-        log.debug('-- NEW NODES -----------------');
-        dump(tempSpace.node);
-
-        log.debug('-- replacement MAP -----------------')
-        log.debug versioning
-
-        log.debug('-------------------')
-
-
-        Event e = basicOperationsService.newEvent("fixClassificationUseNodeForName(${classification}, ${name}, ${node})")
+        Event e = basicOperationsService.newEvent("fixClassificationUseNodeForName(${classification.id}, ${name.id}, ${node.id})")
 
         log.debug "persist"
-        tempSpace = DomainUtils.refetchArrangement(tempSpace)
-        basicOperationsService.persistNode(e, tempSpace.node)
+        basicOperationsService.persistNode(e, Arrangement.get(tempSpace.id).node)
 
         log.debug "version"
+        tempSpace = DomainUtils.refetchArrangement(tempSpace)
         classification = DomainUtils.refetchArrangement(classification)
-        versioningService.performVersioning(e, versioning.collectEntries { k, v -> [Node.get(k), Node.get(v)] }, classification)
+        Map<Node, Node> versioning = versioningService.getStandardVersioningMap(tempSpace, classification);
+        nodesToZap.each { Long it ->
+            log.debug "zapping ${it}"
+            Node a = Node.get(it)
+            Node b = Node.get(0)
+
+            versioning.put(a, b)
+        }
+
+        versioningService.performVersioning(e, versioning, tempSpace)
 
         log.debug "cleanup"
         tempSpace = DomainUtils.refetchArrangement(tempSpace);
@@ -563,5 +548,10 @@ select count(*) as ct from (
                 dump(l.subnode, d + 1, tree);
             }
         }
+    }
+
+    String ll(Link l) {
+        l = DomainUtils.refetchLink(l)
+        return "LINK ${l.id} : ${l.supernode.id} -${l.typeUriIdPart}> ${l.subnode.id}"
     }
 }
