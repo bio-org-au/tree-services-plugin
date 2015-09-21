@@ -17,6 +17,12 @@
 package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.*
+import au.org.biodiversity.nsl.Link
+import au.org.biodiversity.nsl.Event
+import au.org.biodiversity.nsl.Node
+import au.org.biodiversity.nsl.Arrangement
+import au.org.biodiversity.nsl.Name
+import au.org.biodiversity.nsl.Instance
 import grails.transaction.Transactional
 import groovy.sql.Sql
 
@@ -440,13 +446,122 @@ select count(*) as ct from (
     }
 
     void fixClassificationUseNodeForName(Arrangement classification, Name name, Node node) {
-        if(!classification) throw new IllegalArgumentException('classification cannot be null');
-        if(!name) throw new IllegalArgumentException('name cannot be null');
-        if(!node) throw new IllegalArgumentException('node cannot be null');
-        if(node.root != classification) throw new IllegalArgumentException('node root must match classification');
-        if(node.name != name) throw new IllegalArgumentException('node name must match name');
+        if (!classification) throw new IllegalArgumentException('classification cannot be null');
+        if (!name) throw new IllegalArgumentException('name cannot be null');
+        if (!node) throw new IllegalArgumentException('node cannot be null');
+        if (node.root != classification) throw new IllegalArgumentException('node root must match classification');
+        if (node.name != name) throw new IllegalArgumentException('node name must match name');
+
+        // right! Find all the other nodes in this classification for this name
+        // I'll store the ID because grails and hibernate and native sql play together so badly
+
+        Collection<Long> nodesToZap = new HashSet<Long>(Node.findAllByRootAndNameAndReplacedAt(classification, name, null).findAll {
+            it != node
+        }*.id);
+
+        log.debug "want to keep ${node}"
+        log.debug "want to zap ${nodesToZap}"
+
+        log.debug('-- KEEP -----------------');
+        dump(node);
+        nodesToZap.each { log.debug('-- ZAP -----------------'); dump(Node.get(it)); }
+
+        log.debug "temp arrangement"
+        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+        Map<Long, Long> versioning = new HashMap<Long, Long>();
+
+        /**
+         * Steps are:
+         * - adopt the node to be used and check out
+         * - Adopt all the parents of the nodes I want to zap and check out.
+         * - remove the nodes to be zapped from all the parents.
+         * - adopt all taxonomic node child nodes into the new node
+         * - persist.
+         * - version.
+         */
+
+        log.debug "new node"
+
+        Link newNodeLink = basicOperationsService.adoptNode(tempSpace.node, node, VersioningMethod.F)
+        basicOperationsService.checkoutLink(newNodeLink)
+        newNodeLink = DomainUtils.refetchLink(newNodeLink)
+        long newNodeId = newNodeLink.subnode.id;
+        versioning.put(node.id, newNodeId);
 
 
+        log.debug "zap nodes"
 
+        nodesToZap.each {
+            log.debug "zap ${Node.get(it)}"
+            Link currentLink = DomainUtils.getSingleCurrentSuperlinkInTree(Node.get(it));
+            log.debug "Current parent is ${currentLink.supernode}"
+
+            // check out parent, if necessary
+            if (!versioning.containsKey(currentLink.supernode.id)) {
+                tempSpace = DomainUtils.refetchArrangement(tempSpace)
+                Link l = basicOperationsService.adoptNode(tempSpace.node, currentLink.supernode, VersioningMethod.F)
+                log.debug "Adopting ${currentLink.supernode}"
+                basicOperationsService.checkoutLink(l)
+                l = DomainUtils.refetchLink(l)
+                log.debug "New id for ${currentLink.supernode} is ${l.subnode}"
+                currentLink = DomainUtils.refetchLink(currentLink);
+                versioning.put(currentLink.supernode.id, l.subnode.id);
+            }
+
+            // remove node from the checked out parent
+            basicOperationsService.deleteLink(Node.get(versioning.get(currentLink.supernode.id)), currentLink.linkSeq)
+
+            // adopt all taxonomic child nodes onto new chosen node
+            Node.get(it).subLink.findAll { it.subnode.internalType == NodeInternalType.T }.each {
+                basicOperationsService.adoptNode(Node.get(newNodeId), it.subnode, it.versioningMethod, linkType: DomainUtils.getLinkTypeUri(it))
+            }
+
+            // kill the node
+            versioning.put(it, 0);
+        }
+
+        log.debug('-- NEW NODES -----------------');
+        dump(tempSpace.node);
+
+        log.debug('-- replacement MAP -----------------')
+        log.debug versioning
+
+        log.debug('-------------------')
+
+
+        Event e = basicOperationsService.newEvent("fixClassificationUseNodeForName(${classification}, ${name}, ${node})")
+
+        log.debug "persist"
+        tempSpace = DomainUtils.refetchArrangement(tempSpace)
+        basicOperationsService.persistNode(e, tempSpace.node)
+
+        log.debug "version"
+        classification = DomainUtils.refetchArrangement(classification)
+        versioningService.performVersioning(e, versioning.collectEntries { k, v -> [Node.get(k), Node.get(v)] }, classification)
+
+        log.debug "cleanup"
+        tempSpace = DomainUtils.refetchArrangement(tempSpace);
+        classification = DomainUtils.refetchArrangement(classification);
+        basicOperationsService.moveFinalNodesFromTreeToTree(tempSpace, classification)
+
+        tempSpace = DomainUtils.refetchArrangement(tempSpace);
+        basicOperationsService.deleteArrangement(tempSpace)
+
+        log.debug "done"
+    }
+
+
+    void dump(Node n, int d = 0, Arrangement tree = null) {
+        n = Node.get(n.id);
+        if (tree == null) tree = n.root;
+        String indent = '*   *   *   *   *   *   *   *   *   *   *   *   *   *   '.substring(0, d * 4);
+        log.debug "${indent} ${n} ${n.internalType} P:${n.prev?.id} N:${n.next?.id} R:${n.root?.id} NAME:${n.name} INST:${n.instance?.id} ${n.typeUriIdPart} ${n.resourceUriIdPart} ${n.literal}"
+
+        if (n.root == tree) {
+            n.subLink.each { Link l ->
+                if(l.subnode.internalType != NodeInternalType.V)
+                dump(l.subnode, d + 1, tree);
+            }
+        }
     }
 }
