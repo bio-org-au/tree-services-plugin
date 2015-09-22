@@ -472,9 +472,13 @@ select count(*) as ct from (
 
         Link rootLink = basicOperationsService.adoptNode(Node.get(tempSpace.node.id), DomainUtils.getSingleSubnode(Arrangement.get(classification.id).node), VersioningMethod.F);
         basicOperationsService.checkoutLink(Link.get(rootLink.id));
+        rootLink = DomainUtils.refetchLink(rootLink);
+        log.debug "Node ${rootLink.subnode.prev.id} is checked out as ${rootLink.subnode.id}"
+
 
         // ok. checkout the target node
         Node checkedOutNode = basicOperationsService.checkoutNode(Node.get(tempSpace.node.id), Node.get(node.id));
+        log.debug "Node ${node.id} is checked out as ${checkedOutNode.id}"
 
         nodesToZap.each {
             log.debug "zapping node ${it}"
@@ -489,6 +493,8 @@ select count(*) as ct from (
 
             Node parentNode = parentLink.subnode;
             log.debug "parent node is ${parentNode}"
+            log.debug "parent node is in tree ${parentNode.root.id}"
+            log.debug "if parent node were checked out, it would be in tree ${tempSpace.id}"
             if(parentNode.root.id != tempSpace.id) {
                 log.debug "parent node is not in tempspace, so checking it out"
                 parentNode = basicOperationsService.checkoutNode(Node.get(tempSpace.node.id), Node.get(parentNode.id));
@@ -497,7 +503,7 @@ select count(*) as ct from (
 
             log.debug "deleting link#${parentLink.linkSeq} from node parentNode.id"
             // remove node from the checked out parent
-            basicOperationsService.deleteLink(Node.get(parentNode.id), parentLink.linkSeq)
+            basicOperationsService.deleteLink(Node.get(parentNode.id), currentLink.linkSeq)
 
             // adopt all taxonomic child nodes onto new chosen node
             Node.get(it).subLink.findAll { it.subnode.internalType == NodeInternalType.T }.each {
@@ -552,6 +558,6 @@ select count(*) as ct from (
 
     String ll(Link l) {
         l = DomainUtils.refetchLink(l)
-        return "LINK ${l.id} : ${l.supernode.id} -${l.typeUriIdPart}> ${l.subnode.id}"
+        return "LINK ${l.id} aka ${l.supernode.id}/${l.linkSeq}: ${l.supernode.id} -${l.typeUriIdPart}> ${l.subnode.id}"
     }
 }
