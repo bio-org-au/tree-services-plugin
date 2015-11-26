@@ -489,4 +489,8 @@ class DomainUtils {
 			return o;
 		}
 	}
+
+	static int simpleNameCompare(Node a, Node b) {
+		return ((a.name?.simpleName ?: a.nameUriIdPart ?: "") as String) <=> ((b.name?.simpleName ?: b.nameUriIdPart ?: "") as String)
+	}
 }

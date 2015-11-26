@@ -369,6 +369,32 @@ class QueryService {
         return l
     }
 
+    // find the latest parent node for the given node up to the root of
+    // the tree that is velongs to
+
+    List<Link> getLatestPathForNode(Node n) {
+        Collection<Link> path = new ArrayList<Link>()
+        for(;;) {
+            def links = n.supLink.findAll { it.supernode.root == n.root && it.supernode.checkedInAt != null}
+
+            if(links) {
+                Link mostrecent = links.first()
+                links.each { Link it ->
+                    if(it.supernode.checkedInAt.timeStamp > mostrecent.supernode.checkedInAt.timeStamp) {
+                        mostrecent = it
+                    }
+                }
+
+                path.add(mostrecent)
+                n = mostrecent.supernode
+            }
+            else {
+                break
+            }
+        }
+        return path;
+    }
+
     Long getNextval() {
         return doWork(sessionFactory_nsl) { Connection cnct ->
             return withQresult(cnct, "select nextval('nsl_global_seq') as v") {}
@@ -653,7 +679,7 @@ select distinct start_id from ll where supernode_id = ?
         public final Map<Long, Instance> instanceUriMap = new HashMap<Long, Instance>();
 
         Tree(Node node) {
-            this.branch = new Branch(null, node, 500); // an arbutrary cutoff. Is hould make this a config parameter
+            this.branch = new Branch(null, node, 500); // an arbitrary cutoff. I should make this a config parameter
             node.supLink.each { placements.add(new Placement(it)) }
 
             if (!DomainUtils.isEndNode(node))
