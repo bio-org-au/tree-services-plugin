@@ -16,7 +16,7 @@
 
 package au.org.biodiversity.nsl.tree
 
-import au.org.biodiversity.nsl.*
+import au.org.biodiversity.nsl.*;
 import grails.transaction.Transactional
 import org.hibernate.SessionFactory
 import org.apache.shiro.SecurityUtils;
@@ -142,7 +142,7 @@ class BasicOperationsService {
         return thing
     }
 
-    private String getPrincipal() {
+    private static String getPrincipal() {
         return SecurityUtils.subject?.principal as String ?: 'No principal'
     }
 
@@ -152,24 +152,23 @@ class BasicOperationsService {
      * @param note
      * @return
      */
-    Event newEvent(String note) {
-        newEvent(note, getPrincipal())
+    Event newEvent(Namespace namespace, String note) {
+        newEvent(namespace, note, getPrincipal())
     }
 
-    Event newEvent(String note, String authUser) {
+    Event newEvent(Namespace namespace, String note, String authUser) {
+        newEventTs(namespace, new Timestamp(new Date().time), authUser, note);
+    }
+
+    Event newEventTs(Namespace namespace, Timestamp ts, String authUser, String note) {
+        if(!namespace) throw new IllegalArgumentException("null namespace");
+        if(!ts) throw new IllegalArgumentException("null timestamp");
         if(!authUser) {
             authUser = getPrincipal()
         }
-        clearAndFlush {
-            Event event = new Event(note: note, authUser: authUser, timeStamp: new Timestamp(new Date().time))
-            event.save()
-            return event;
-        } as Event
-    }
 
-    Event newEventTs(Timestamp ts, String authUser, String note) {
         clearAndFlush {
-            Event event = new Event(note: note, authUser: authUser, timeStamp: ts)
+            Event event = new Event(namespace: namespace, note: note, authUser: authUser, timeStamp: ts)
             event.save()
             return event;
         } as Event
@@ -177,6 +176,7 @@ class BasicOperationsService {
 
     Arrangement createTemporaryArrangement() {
         clearAndFlush {
+            // temporary arangments do not belong to any shard
             Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y')
             tempArrangement.save()
             Node tempNode = new Node(
@@ -207,6 +207,7 @@ class BasicOperationsService {
                 event = DomainUtils.refetchEvent(event)
 
                 Arrangement classification = new Arrangement(
+                        namespace: event.namespace,
                         arrangementType: ArrangementType.P,
                         synthetic: 'N',
                         label: label,
@@ -358,14 +359,20 @@ class BasicOperationsService {
 
         if (nslName) {
             if (!name || name.nsPart != nslNameNs() || name.idPart != (nslName.id as String)) {
-                ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAME_URI_DOESNT_MATCH, [name, nslName])]);
+                ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAME_URI_DOESNT_MATCH, [name, nslName])])
 
+            }
+            if(supernode.root.namespace != nslName.namespace) {
+                ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [supernode.root.namespace, nslName.namespace])])
             }
         }
 
         if (nslInstance) {
             if (!taxon || taxon.nsPart != nslInstanceNs() || taxon.idPart != (nslInstance.id as String)) {
                 ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.INSTANCE_URI_DOESNT_MATCH, [taxon, nslInstance])]);
+            }
+            if(supernode.root.namespace != nslInstance.namespace) {
+                ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [supernode.root.namespace, nslInstance.namespace])])
             }
         }
 
@@ -469,6 +476,20 @@ class BasicOperationsService {
                 Name nslName = params['nslName'] as Name
                 Uri taxon = params['taxon'] as Uri
                 Instance nslInstance = params['nslInstance'] as Instance
+
+                if(nslName && n.root.namespace != nslName.namespace) {
+                    ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [
+                            n,
+                            ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [n.root.namespace, nslName.namespace])
+                    ])
+                }
+
+                if(nslInstance && n.root.namespace != nslInstance.namespace) {
+                    ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [
+                            n,
+                            ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [n.root.namespace, nslInstance.namespace])
+                    ])
+                }
 
                 if (nslName && name == null) {
                     name = new Uri(nslNameNs(), nslName.id)
@@ -864,6 +885,14 @@ class BasicOperationsService {
     @SuppressWarnings("GroovyUnusedDeclaration")
     public void persistAll(Event e, Arrangement a) {
         mustHave(Event: (e), Arrangement: a) {
+
+            if (e.namespace != a.namespace) {
+                ServiceException.raise ServiceException.makeMsg(Msg.persistAll, [
+                        a,
+                        ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [e.namespace, a.namespace])
+                ])
+            }
+
             clearAndFlush {
                 e = DomainUtils.refetchEvent(e)
                 a = DomainUtils.refetchArrangement(a)
@@ -940,8 +969,18 @@ class BasicOperationsService {
                 e = DomainUtils.refetchEvent(e)
                 n = DomainUtils.refetchNode(n)
 
+                if (e.namespace != n.root.namespace) {
+                    ServiceException.raise ServiceException.makeMsg(Msg.persistAll, [
+                            n,
+                            ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [e.namespace, n.root.namespace])
+                    ])
+                }
+
                 if (DomainUtils.isCheckedIn(n)) {
-                    ServiceException.raise ServiceException.makeMsg(Msg.persistNode, [n, ServiceException.makeMsg(Msg.PERSISTENT_NODE_NOT_PERMITTED, n)])
+                    ServiceException.raise ServiceException.makeMsg(Msg.persistNode, [
+                            n,
+                            ServiceException.makeMsg(Msg.PERSISTENT_NODE_NOT_PERMITTED, n)]
+                    )
                 }
 
                 /* We want to be able to go "persist the whole tree", but this operation should not
@@ -1057,6 +1096,22 @@ class BasicOperationsService {
                 supernode = DomainUtils.refetchNode(supernode)
                 subnode = DomainUtils.refetchNode(subnode)
                 params = DomainUtils.refetchMap(params)
+
+                if (DomainUtils.isEndNode(supernode) || DomainUtils.isEndNode(subnode)) {
+                    ServiceException.raise ServiceException.makeMsg(Msg.adoptNode, [
+                            supernode,
+                            subnode,
+                            ServiceException.makeMsg(Msg.END_NODE_NOT_PERMITTED)
+                    ])
+                }
+
+                if (supernode.root.namespace != subnode.root.namespace) {
+                    ServiceException.raise ServiceException.makeMsg(Msg.adoptNode, [
+                            supernode,
+                            subnode,
+                            ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [supernode.root.namespace, subnode.root.namespace])
+                    ])
+                }
 
                 if (supernode.internalType == NodeInternalType.V) {
                     ServiceException.raise ServiceException.makeMsg(Msg.persistNode, [

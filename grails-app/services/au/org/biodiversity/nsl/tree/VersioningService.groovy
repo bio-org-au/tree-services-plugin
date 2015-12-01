@@ -86,6 +86,9 @@ class VersioningService {
                     if (!DomainUtils.isCheckedIn(n)) {
                         throw new IllegalArgumentException('cannot replace a draft node')
                     }
+                    if(e.namespace != n.root.namespace) {
+                        throw new IllegalArgumentException('event namespace must match replaced node namespace')
+                    }
                 }
 
                 replace.values.each { Node n ->
@@ -98,6 +101,9 @@ class VersioningService {
                     }
                     if (replace.containsKey(n)) {
                         throw new IllegalArgumentException('cannot replace a node with a node that is itself being replaced')
+                    }
+                    if(n.root.namespace != null && e.namespace != n.root.namespace) {
+                        throw new IllegalArgumentException('event namespace must match replaced node namespace')
                     }
                 }
 
@@ -644,7 +650,8 @@ class VersioningService {
      * Delete a slice of history.
      * This operation deletes replaced nodes that are not used elsewhere, recursively deleting any nodes beneath it that would be
      * orphaned by the deletion.
-     * It can only be used on replaced nodes that have no references to them. That is - top level classifiaction roots.
+     * It can only be used on replaced nodes that have no references to them. That is - top level classification roots
+     * that no longer have the classification node tracking link pointing at them.
      */
 
     void deleteHistory(Node node) {
@@ -841,7 +848,7 @@ class VersioningService {
             }
 
             return v
-        }
+        } as Map<Node, Node>
     }
 
     private static mustHave(Map things, Closure work) {
