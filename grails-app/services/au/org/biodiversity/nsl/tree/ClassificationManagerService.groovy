@@ -50,12 +50,13 @@ class ClassificationManagerService {
                 INSTANCE_APPEARS_TWICE
     }
 
-    void createClassification(Map params = [:]) throws ServiceException {
+    void createClassification(Namespace namespace, Map params = [:]) throws ServiceException {
         // todo - use Peter's "must have" thing
+        if (!namespace) throw new IllegalArgumentException("namespace must be specified");
         if (!params.label) throw new IllegalArgumentException("label must be specified");
         if (!params.description) throw new IllegalArgumentException("description must be specified");
 
-        if (Arrangement.findByLabel(params.label)) {
+        if (Arrangement.findByNamespaceAndLabel(namespace, params.label)) {
             ServiceException.raise(Message.makeMsg(Msg.createClassification, [params.label, Message.makeMsg(Msg.LABEL_ALREADY_EXISTS, [params.label])]));
         }
 
@@ -108,7 +109,7 @@ class ClassificationManagerService {
             copyNodes = null;
         }
 
-        Event e = basicOperationsService.newEvent("Creating classification ${params.label}")
+        Event e = basicOperationsService.newEvent(namespace, "Creating classification ${params.label}")
         Arrangement newClass = basicOperationsService.createClassification(e, params.label, params.description)
 
         if (copyNodes) {
@@ -162,7 +163,7 @@ class ClassificationManagerService {
         if (!params.label) throw new IllegalArgumentException("label must be specified");
         if (!params.description) throw new IllegalArgumentException("description must be specified");
 
-        if (params['label'] != a.label && Arrangement.findByLabel(params.label)) {
+        if (params['label'] != a.label && Arrangement.findByNamespaceAndLabel(a.namespace, params.label)) {
             ServiceException.raise(Message.makeMsg(Msg.updateClassification, [a, Message.makeMsg(Msg.LABEL_ALREADY_EXISTS, [params.label])]));
         }
 
@@ -490,7 +491,7 @@ select count(*) as ct from (
             }
         }
 
-        Event e = basicOperationsService.newEvent("fixClassificationUseNodeForName(${classification.id}, ${name.id}, ${node.id})")
+        Event e = basicOperationsService.newEvent(classification.namespace, "fixClassificationUseNodeForName(${classification.id}, ${name.id}, ${node.id})")
 
         log.debug "persist"
         basicOperationsService.persistNode(e, Arrangement.get(tempSpace.id).node)

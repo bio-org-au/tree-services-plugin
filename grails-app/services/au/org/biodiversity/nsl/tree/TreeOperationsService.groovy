@@ -369,7 +369,7 @@ public class TreeOperationsService {
         }
 
         log.debug "persist"
-        Event addNodeEvent = basicOperationsService.newEvent("add name ${name?.id ?: nameUri} to name ${supername}", authUser)
+        Event addNodeEvent = basicOperationsService.newEvent(superNode.root.namespace, "add name ${name?.id ?: nameUri} to name ${supername}", authUser)
         basicOperationsService.persistNode(addNodeEvent, link.subnode)
 
         Map<Node, Node> replacementMap = new HashMap<Node, Node>()
@@ -707,7 +707,7 @@ public class TreeOperationsService {
 
         log.debug "event"
         existingNode = DomainUtils.refetchNode(existingNode)
-        Event event = basicOperationsService.newEvent("update name ${existingNode.nameId ?: DomainUtils.getNameUri(existingNode)}", authUser)
+        Event event = basicOperationsService.newEvent(existingNode.root.namespace, "update name ${existingNode.nameId ?: DomainUtils.getNameUri(existingNode)}", authUser)
 
         log.debug "persist"
         basicOperationsService.persistNode(event, tempSpace.node)
@@ -862,7 +862,7 @@ public class TreeOperationsService {
         v.put(existingMoveFrom, moveFromCheckout)
         v.put(existingNode, existingReplacement ?: DomainUtils.getEndNode())
 
-        Event e = basicOperationsService.newEvent("remove NSL node ${existingNode.id}", authUser)
+        Event e = basicOperationsService.newEvent(existingNode.root.namespace, "remove NSL node ${existingNode.id}", authUser)
 
         basicOperationsService.persistNode e, tempSpace.node
         versioningService.performVersioning e, v, arrangement
@@ -992,7 +992,7 @@ public class TreeOperationsService {
         }
 
         log.debug "persist, version, cleanup"
-        Event e = basicOperationsService.newEvent "setNslProfileData ${nameID}.${property}"
+        Event e = basicOperationsService.newEvent existingName.root.namespace, "setNslProfileData ${nameID}.${property}"
 
         basicOperationsService.persistNode e, tempSpace.node
         versioningService.performVersioning e, v, arrangement
