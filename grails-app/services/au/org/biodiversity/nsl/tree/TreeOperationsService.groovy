@@ -307,7 +307,7 @@ public class TreeOperationsService {
                     if (!superNode) throw new IllegalArgumentException("Classification ${classification} is not a properly-formed tree")
                 }
                 return addNameToClassification(superNode, nameUri, taxonUri, name, instance, params, profileItems,
-                        supername.id.toString(), classification, authUser)
+                        supername ? supername.id as String : "Top Level", classification, authUser)
             } as Node
         } as Node
     }
