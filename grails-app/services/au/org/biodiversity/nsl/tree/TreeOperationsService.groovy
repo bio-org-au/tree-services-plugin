@@ -323,7 +323,7 @@ public class TreeOperationsService {
                                          Arrangement classification,
                                          String authUser) {
         log.debug "temp arrangement"
-        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(classification.namespace)
 
         log.debug "adopt"
         Link link = basicOperationsService.adoptNode(tempSpace.node, superNode, VersioningMethod.F)
@@ -569,7 +569,7 @@ public class TreeOperationsService {
                                             Arrangement classification,
                                             String authUser) {
         log.debug "tempspace"
-        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(classification.namespace)
 
         existingNode = DomainUtils.refetchNode(existingNode)
         existingNodeSingleSuperlink = DomainUtils.refetchLink(existingNodeSingleSuperlink)
@@ -808,7 +808,7 @@ public class TreeOperationsService {
                     throw new IllegalArgumentException("replacement name ${replacementNameUri} not found")
                 }
 
-                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(arrangement.namespace)
 
                 Node existingNode = findSingleName(arrangement, nameUri, 'name')
 
@@ -838,7 +838,7 @@ public class TreeOperationsService {
                     throw new IllegalArgumentException("replacement name ${replacementNslName.id} not found")
                 }
 
-                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(arrangement.namespace)
 
                 Node existingNode = findSingleNslName(arrangement, name, 'name')
 
@@ -891,7 +891,7 @@ public class TreeOperationsService {
                     throw new IllegalArgumentException("replacement instance ${replacementInstance.id} not found")
                 }
 
-                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+                Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(arrangement.namespace)
 
                 Node existingNode = findSingleNslInstance(arrangement, instance, 'instance')
 
@@ -967,7 +967,7 @@ public class TreeOperationsService {
 
         log.debug "temp space and adopt"
 
-        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(arrangement.namespace)
         Node newName = adoptAndCheckOut(tempSpace, existingName)
 
         Map<Node, Node> v = new HashMap<Node, Node>()

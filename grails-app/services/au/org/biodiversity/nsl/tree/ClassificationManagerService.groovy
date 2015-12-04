@@ -40,13 +40,13 @@ class ClassificationManagerService {
      * Possible resultEnums returned by the validation result.
      */
     public static enum ValidationResult {
-        /** param bundle will be [classification, nodeId] */
-        BAD_REPLACEDAT,
-        /** param bundle will be [classification, nodeId] */
+        /** param bundle will be [namespace, classification, nodeId] */
+                BAD_REPLACEDAT,
+        /** param bundle will be [namespace, classification, nodeId] */
                 CURRENT_NO_PARENT,
-        /** param bundle will be [classification, nameId] */
+        /** param bundle will be [namespace, classification, nameId] */
                 NAME_APPEARS_TWICE,
-        /** param bundle will be [classification, instanceId] */
+        /** param bundle will be [namespace, classification, instanceId] */
                 INSTANCE_APPEARS_TWICE
     }
 
@@ -114,7 +114,7 @@ class ClassificationManagerService {
 
         if (copyNodes) {
             log.debug "temp arrangement"
-            Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+            Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(namespace)
             newClass = DomainUtils.refetchArrangement(newClass)
             tempSpace = DomainUtils.refetchArrangement(tempSpace)
             Node oldRootNode = DomainUtils.getSingleSubnode(newClass.node);
@@ -160,6 +160,7 @@ class ClassificationManagerService {
     void updateClassification(Map params = [:], Arrangement a) throws ServiceException {
         // todo - use Peter's "must have" thing
         if (!a) throw new IllegalArgumentException("Arrangement must be specified")
+        if (!params.namespace) throw new IllegalArgumentException("namespace must be specified");
         if (!params.label) throw new IllegalArgumentException("label must be specified");
         if (!params.description) throw new IllegalArgumentException("description must be specified");
 
@@ -202,25 +203,27 @@ class ClassificationManagerService {
         validationResults.c = [:];
 
         Arrangement.findAll { arrangementType == ArrangementType.P }.each {
-            validationResults.c[it.label] = validate(it.label)
+            if(!validationResults.c[it.namespace.name]) validationResults.c[it.namespace.name] = [:]
+            validationResults.c[it.namespace.name][it.label] = validate(it)
         }
 
         return validationResults
     }
 
-    private validate(String label) {
+    private validate(Arrangement classification) {
         def results = [];
 
-        results.addAll(validate_replacedat_matches_nextnode(label));
-        results.addAll(validate_current_nodes_child_of_current_node(label));
-        results.addAll(validate_names_appear_once(label));
-        results.addAll(validate_instances_appear_once(label));
+        results.addAll(validate_replacedat_matches_nextnode(classification));
+        results.addAll(validate_current_nodes_child_of_current_node(classification));
+        results.addAll(validate_names_appear_once(classification));
+        results.addAll(validate_instances_appear_once(classification));
 
-        return results;
+        return results ?: [ [msg: "No errors", level: 'success', nested: []]  ];
     }
 
+    // TODO: namespace checks
 
-    private validate_replacedat_matches_nextnode(String label) {
+    private validate_replacedat_matches_nextnode(Arrangement classification) {
         def result = []
 
         Sql sql = Sql.newInstance(dataSource_nsl);
@@ -231,13 +234,13 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = ?
+  a.id = ?
   and (
     (n.next_node_id is null and n.replaced_at_id is not null)
     or
     (n.next_node_id is not null and n.replaced_at_id is null)
   )
-            """, [label]).ct
+            """, [classification.id]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} nodes where replaced_at does not match next_node", level: 'danger', nested: []]
@@ -249,19 +252,19 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = ?
+  a.id = ?
   and (
     (n.next_node_id is null and n.replaced_at_id is not null)
     or
     (n.next_node_id is not null and n.replaced_at_id is null)
   )
 LIMIT 5
-            """, [label]) {
+            """, [classification.id]) {
                     msg.nested << [
                             msg   : "Node ${it.id} has a next node ${it.next_node_id ?: 'null'} and a replaced at of ${it.replaced_at_id ?: 'null'}",
                             level : 'danger',
                             type  : ValidationResult.BAD_REPLACEDAT,
-                            params: [classification: label, nodeId: it.id]
+                            params: [namespace: classification.namespace.name, classification: classification.label, nodeId: it.id]
                     ]
                 }
 
@@ -274,7 +277,7 @@ LIMIT 5
         return result
     }
 
-    private validate_current_nodes_child_of_current_node(String label) {
+    private validate_current_nodes_child_of_current_node(Arrangement classification) {
         def result = []
 
         Sql sql = Sql.newInstance(dataSource_nsl);
@@ -285,7 +288,7 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = ?
+  a.id = ?
   and n.next_node_id is null
   and n.internal_type in ('T','D')
   and not exists (
@@ -297,7 +300,7 @@ where
       and pn.next_node_id is null
   )
 LIMIT 5
-            """, [label]).ct
+            """, [classification.id]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} nodes which are current but have no current parent node", level: 'danger', nested: []]
@@ -309,7 +312,7 @@ from
   tree_arrangement a
   join tree_node n on a.id = n.tree_arrangement_id
 where
-  a.label = '${label}'
+  a.id = ?
   and n.next_node_id is null
   and n.internal_type in ('T','D')
   and not exists (
@@ -321,12 +324,12 @@ where
       and pn.next_node_id is null
   )
 LIMIT 5
-            """, [label]) {
+            """, [classification.id]) {
                     msg.nested << [
                             msg   : "Node ${it.id} is current but has no current parent node",
                             level : 'danger',
                             type  : ValidationResult.CURRENT_NO_PARENT,
-                            params: [classification: label, nodeId: it.id]
+                            params: [namespace: classification.namespace.name, classification: classification.label, nodeId: it.id]
                     ]
                 }
 
@@ -339,7 +342,7 @@ LIMIT 5
         return result
     }
 
-    private validate_names_appear_once(String label) {
+    private validate_names_appear_once(Arrangement classification) {
         def result = []
 
         Sql sql = Sql.newInstance(dataSource_nsl);
@@ -351,13 +354,13 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = ?
+    a.id = ?
     and n.name_id is not null
     and n.next_node_id is null
   group by n.name_id
   having count(*) > 1
 ) as multiname
-            """, [label]).ct
+            """, [classification.id]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} names appearing multiple times", level: 'warning', nested: []]
@@ -369,17 +372,17 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = ?
+    a.id = ?
     and n.name_id is not null
     and n.next_node_id is null
   group by n.name_id
   having count(*) > 1
   LIMIT 5
-            """, [label]) {
+            """, [classification.id]) {
                     msg.nested << [msg   : "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})",
                                    level : 'warning',
                                    type  : ValidationResult.NAME_APPEARS_TWICE,
-                                   params: [classification: label, nameId: it.name_id]
+                                   params: [namespace: classification.namespace.name, classification: classification.label, nameId: it.name_id]
                     ]
                 }
 
@@ -392,7 +395,7 @@ select count(*) as ct from (
         return result
     }
 
-    private validate_instances_appear_once(String label) {
+    private validate_instances_appear_once(Arrangement classification) {
         def result = []
 
         Sql sql = Sql.newInstance(dataSource_nsl);
@@ -404,13 +407,13 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = ?
+    a.id = ?
     and n.instance_id is not null
     and n.next_node_id is null
   group by n.instance_id
   having count(*) > 1
 ) as multiname
-            """, [label]).ct
+            """, [classification.id]).ct
 
             if (ct > 0) {
                 def msg = [msg: "There are ${ct} instances appearing multiple times", level: 'warning', nested: []]
@@ -422,19 +425,19 @@ select count(*) as ct from (
     tree_arrangement a
     join tree_node n on a.id = n.tree_arrangement_id
   where
-    a.label = ?
+    a.id = ?
     and n.instance_id is not null
     and n.next_node_id is null
   group by n.instance_id
   having count(*) > 1
   LIMIT 5
-            """, [label]) {
+            """, [classification.id]) {
                     Instance i = Instance.get(it.instance_id)
                     msg.nested << [
                             msg   : "${i.name.fullName} in ${i.reference.title} ${i.reference?.author?.name} appears ${it.ct} times (instance id: ${it.instance_id})",
                             level : 'warning',
                             type  : ValidationResult.INSTANCE_APPEARS_TWICE,
-                            params: [classification: label, instanceId: it.instance_id]
+                            params: [namespace: classification.namespace.name, classification: classification.label, instanceId: it.instance_id]
                     ]
                 }
 
@@ -462,7 +465,7 @@ select count(*) as ct from (
         }*.id);
 
         log.debug "temp arrangement"
-        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement()
+        Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(classification.namespace)
 
         Link rootLink = basicOperationsService.adoptNode(Node.get(tempSpace.node.id), DomainUtils.getSingleSubnode(Arrangement.get(classification.id).node), VersioningMethod.F);
         basicOperationsService.checkoutLink(Link.get(rootLink.id));

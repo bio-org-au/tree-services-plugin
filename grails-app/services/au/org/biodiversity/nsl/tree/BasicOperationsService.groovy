@@ -174,10 +174,11 @@ class BasicOperationsService {
         } as Event
     }
 
-    Arrangement createTemporaryArrangement() {
+    Arrangement createTemporaryArrangement(Namespace namespace) {
+        if(!namespace) throw new IllegalArgumentException("null namespace");
         clearAndFlush {
             // temporary arangments do not belong to any shard
-            Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y')
+            Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y', namespace: namespace)
             tempArrangement.save()
             Node tempNode = new Node(
                     root: tempArrangement,
@@ -275,7 +276,6 @@ class BasicOperationsService {
      */
 
     Node createDraftNode(Map params = [:], Node supernode, VersioningMethod versioningMethod, NodeInternalType internalType) {
-
         mustHave(supernode: supernode, versioningMethod: versioningMethod, internalType: internalType) {
             clearAndFlush {
                 supernode = DomainUtils.refetchNode(supernode)

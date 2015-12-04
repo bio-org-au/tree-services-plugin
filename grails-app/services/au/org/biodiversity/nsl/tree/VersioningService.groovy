@@ -75,6 +75,10 @@ class VersioningService {
                     throw new IllegalArgumentException('cannot use end tree as home arrangment')
                 }
 
+                if (homeArrangement.namespace != e.namespace) {
+                    throw new IllegalArgumentException('home arranagement namespace must match event namespace')
+                }
+
                 replace.keySet.each { Node n ->
                     if (!n) throw new IllegalArgumentException('cannot replace a null node')
                     if (DomainUtils.isEndNode(n)) {
