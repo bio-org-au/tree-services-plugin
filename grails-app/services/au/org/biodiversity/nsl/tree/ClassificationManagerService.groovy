@@ -50,7 +50,7 @@ class ClassificationManagerService {
                 INSTANCE_APPEARS_TWICE
     }
 
-    void createClassification(Namespace namespace, Map params = [:]) throws ServiceException {
+    void createClassification(Map params = [:], Namespace namespace) throws ServiceException {
         // todo - use Peter's "must have" thing
         if (!namespace) throw new IllegalArgumentException("namespace must be specified");
         if (!params.label) throw new IllegalArgumentException("label must be specified");
