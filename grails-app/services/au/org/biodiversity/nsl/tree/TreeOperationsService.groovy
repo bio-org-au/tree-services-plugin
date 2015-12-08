@@ -852,7 +852,6 @@ public class TreeOperationsService {
                                               Node existingReplacement,
                                               Arrangement arrangement,
                                               String authUser) {
-
         Node existingMoveFrom = DomainUtils.getSingleSupernode(existingNode)
 
         Node moveFromCheckout = adoptAndCheckOut(tempSpace, existingMoveFrom)
@@ -862,6 +861,7 @@ public class TreeOperationsService {
         v.put(existingMoveFrom, moveFromCheckout)
         v.put(existingNode, existingReplacement ?: DomainUtils.getEndNode())
 
+        existingNode = DomainUtils.refetchNode(existingNode);
         Event e = basicOperationsService.newEvent(existingNode.root.namespace, "remove NSL node ${existingNode.id}", authUser)
 
         basicOperationsService.persistNode e, tempSpace.node
@@ -875,6 +875,20 @@ public class TreeOperationsService {
         deleteNslInstance(arrangement, instance, replacementInstance, null)
     }
 
+    void zz() {
+    Throwable t = new Throwable();
+        int i=0;
+        while ( !t.getStackTrace()[i].getMethodName().endsWith("zz"))
+            i++;
+
+        while ( t.getStackTrace()[i].getMethodName().endsWith("zz"))
+            i++;
+
+        StackTraceElement e = t.getStackTrace()[i];
+
+        log.debug("${e.getMethodName()}(${e.getFileName()}:${e.getLineNumber()})");
+    }
+    
     void deleteNslInstance(Arrangement arrangement, Instance instance, Instance replacementInstance, String authUser) {
 
         mustHave(arrangement: arrangement, name: instance) {
@@ -894,6 +908,11 @@ public class TreeOperationsService {
                 Arrangement tempSpace = basicOperationsService.createTemporaryArrangement(arrangement.namespace)
 
                 Node existingNode = findSingleNslInstance(arrangement, instance, 'instance')
+
+                existingNode = DomainUtils.refetchNode(existingNode)
+                tempSpace = DomainUtils.refetchArrangement(tempSpace)
+                existingReplacement = DomainUtils.refetchNode(existingReplacement)
+                arrangement = DomainUtils.refetchArrangement(arrangement)
 
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
             }
