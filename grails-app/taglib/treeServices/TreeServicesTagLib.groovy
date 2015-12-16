@@ -16,7 +16,6 @@
 
 package treeServices
 
-import au.org.biodiversity.nsl.Event
 import au.org.biodiversity.nsl.Node
 import au.org.biodiversity.nsl.tree.QueryService
 
@@ -27,12 +26,6 @@ class TreeServicesTagLib {
     QueryService queryService;
 
     //static encodeAsForTags = [tagName: [taglib:'html'], otherTagName: [taglib:'none']]
-
-    def getEventInfo = { attrs, body ->
-        Event event = attrs.event;
-        def info = queryService.getEventInfo(event);
-        out << body(eventInfo: info)
-    }
 
     def getNodeNameAndInstance = { attrs, body ->
         Node node = attrs.node;
