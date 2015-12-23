@@ -41,13 +41,15 @@ class ClassificationManagerService {
      */
     public static enum ValidationResult {
         /** param bundle will be [namespace, classification, nodeId] */
-                BAD_REPLACEDAT,
+        BAD_REPLACEDAT,
         /** param bundle will be [namespace, classification, nodeId] */
                 CURRENT_NO_PARENT,
         /** param bundle will be [namespace, classification, nameId] */
                 NAME_APPEARS_TWICE,
         /** param bundle will be [namespace, classification, instanceId] */
-                INSTANCE_APPEARS_TWICE
+                INSTANCE_APPEARS_TWICE,
+        /** param bundle will be [namespace, classification, nodeId] */
+                NODE_HAS_MULTIPLE_SUPERNODES
     }
 
     void createClassification(Map params = [:], Namespace namespace) throws ServiceException {
@@ -217,6 +219,7 @@ class ClassificationManagerService {
         results.addAll(validate_current_nodes_child_of_current_node(classification));
         results.addAll(validate_names_appear_once(classification));
         results.addAll(validate_instances_appear_once(classification));
+        results.addAll(validate_current_nodes_have_one_curent_parent_node(classification));
 
         return results ?: [ [msg: "No errors", level: 'success', nested: []]  ];
     }
@@ -325,8 +328,9 @@ where
   )
 LIMIT 5
             """, [classification.id]) {
+                    Node n = Node.get(it.id)
                     msg.nested << [
-                            msg   : "Node ${it.id} is current but has no current parent node",
+                            msg   : "Node ${it.id} ${n?.name?.fullName} is current but has no current parent node",
                             level : 'danger',
                             type  : ValidationResult.CURRENT_NO_PARENT,
                             params: [namespace: classification.namespace.name, classification: classification.label, nodeId: it.id]
@@ -450,6 +454,82 @@ select count(*) as ct from (
         return result
     }
 
+
+    private validate_current_nodes_have_one_curent_parent_node(Arrangement classification) {
+        def result = []
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+        try {
+            def ct = sql.firstRow("""
+select count(*) as ct
+from (
+select n.id as node_id
+  from
+    tree_arrangement a
+    join tree_node n on a.id = n.tree_arrangement_id
+    join tree_link l on n.id = l.subnode_id
+    join tree_node nsup on nsup.id =  l.supernode_id and a.id = nsup.tree_arrangement_id
+  where
+    a.id = ?
+    and n.next_node_id is null
+    and nsup.next_node_id is null
+    and n.internal_type ='T'
+  group by a.label, n.id
+  having count(nsup.id) > 1
+)
+subq
+        """, [classification.id]).ct
+
+            if (ct > 0) {
+                def msg = [msg: "There are ${ct} current nodes with multiple current supernodes", level: 'danger', nested: []]
+                result << msg
+
+                sql.eachRow("""
+select n.id as node_id, count(nsup.id) as ct
+  from
+    tree_arrangement a
+    join tree_node n on a.id = n.tree_arrangement_id
+    join tree_link l on n.id = l.subnode_id
+    join tree_node nsup on nsup.id =  l.supernode_id and a.id = nsup.tree_arrangement_id
+  where
+    a.id = ?
+    and n.next_node_id is null
+    and nsup.next_node_id is null
+    and n.internal_type ='T'
+  group by a.label, n.id
+  having count(nsup.id) > 1
+  LIMIT 20
+            """, [classification.id]) {
+                     Node n = Node.get(it.node_id)
+                    def msg1 =  [
+                            msg   : "Node ${it.node_id} ${n.name?.fullName} has ${it.ct} current supernodes",
+                            level : 'danger',
+                            type  : ValidationResult.NODE_HAS_MULTIPLE_SUPERNODES,
+                            params: [namespace: classification.namespace.name, classification: classification.label, nodeId: it.node_id],
+                            nested: []
+                    ]
+
+                    msg.nested << msg1
+
+                    n.supLink.collect{ it.supernode }.findAll{it.next == null}.each{
+                        msg1.nested << [
+                                msg   : "Node ${it.id} ${it.name?.fullName}",
+                                level : 'info'
+                        ]
+                    }
+
+                }
+
+            }
+        }
+        finally {
+            sql.close();
+        }
+
+        return result
+    }
+
+
     void fixClassificationUseNodeForName(Arrangement classification, Name name, Node node) {
         if (!classification) throw new IllegalArgumentException('classification cannot be null');
         if (!name) throw new IllegalArgumentException('name cannot be null');
@@ -530,7 +610,7 @@ select count(*) as ct from (
         if (n.root == tree) {
             n.subLink.each { Link l ->
                 if(l.subnode.internalType != NodeInternalType.V)
-                dump(l.subnode, d + 1, tree);
+                    dump(l.subnode, d + 1, tree);
             }
         }
     }
