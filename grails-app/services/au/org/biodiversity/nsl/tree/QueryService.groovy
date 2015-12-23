@@ -374,21 +374,20 @@ class QueryService {
 
     List<Link> getLatestPathForNode(Node n) {
         Collection<Link> path = new ArrayList<Link>()
-        for(;;) {
-            def links = n.supLink.findAll { it.supernode.root == n.root && it.supernode.checkedInAt != null}
+        for (; ;) {
+            def links = n.supLink.findAll { it.supernode.root == n.root && it.supernode.checkedInAt != null }
 
-            if(links) {
+            if (links) {
                 Link mostrecent = links.first()
                 links.each { Link it ->
-                    if(it.supernode.checkedInAt.timeStamp > mostrecent.supernode.checkedInAt.timeStamp) {
+                    if (it.supernode.checkedInAt.timeStamp > mostrecent.supernode.checkedInAt.timeStamp) {
                         mostrecent = it
                     }
                 }
 
                 path.add(mostrecent)
                 n = mostrecent.supernode
-            }
-            else {
+            } else {
                 break
             }
         }
@@ -789,53 +788,12 @@ select distinct start_id from ll where supernode_id = ?
         NodePair(Node prev, Node next) { this.prev = prev; this.next = next; }
     }
 
-    Map getEventInfo(Event event) {
-        if (!event) return [event: null];
-
-        Map<Long, Node> replaced = new HashMap<Long, Node>();
-        Map<Long, Node> persisted = new HashMap<Long, Node>();
-        Set<Node> versioned = new HashSet<Node>();
-
-        Node.findAllByReplacedAtAndSyntheticAndInternalType(event, false, NodeInternalType.T).each { replaced.put(it.id, it); }
-        Node.findAllByCheckedInAtAndSyntheticAndInternalType(event, false, NodeInternalType.T).each { persisted.put(it.id, it); }
-
-        new HashSet<Node>(replaced.values()).each { Node it ->
-            if (it.next && it.next.prev == it && persisted.containsKey(it.next.id)) {
-                versioned.add(it);
-                replaced.remove(it.id);
-                persisted.remove(it.next.id);
-            }
-
-        }
-
-        List<NodePair> pairs = new ArrayList<NodePair>();
-        replaced.values().each { Node it -> pairs.add(new NodePair(it, null)); }
-        persisted.values().each { Node it -> pairs.add(new NodePair(null, it)); }
-        versioned.each { Node it -> pairs.add(new NodePair(it, it.next)); }
-
-        pairs.sort { NodePair a, NodePair b ->
-            Node anode = a.prev ?: a.next;
-            Node bnode = b.prev ?: b.next;
-
-            if (!anode.nameUriIdPart && !bnode.nameUriIdPart) return 0;
-            if (!anode.nameUriIdPart) return 1;
-            if (!bnode.nameUriIdPart) return -1;
-
-            String adisplay = resolveName(anode)?.simpleName ?: DomainUtils.getNameUri(anode).asQNameIfOk() ?: '';
-            String bdisplay = resolveName(bnode)?.simpleName ?: DomainUtils.getNameUri(bnode).asQNameIfOk() ?: '';
-
-            return adisplay.compareTo(bdisplay);
-        }
-
-        return [event: event, replaced: replaced.values(), persisted: persisted.values(), versioned: versioned, pairs: pairs];
-    }
-
     static Name resolveName(Node node) {
         if (!node) return null;
         if (node.name) return node.name;
         if (!node.nameUriNsPart || !node.nameUriIdPart) return null;
         if (node.nameUriNsPart.label == 'nsl-name') return Name.get(node.nameUriIdPart as Long);
-        if (node.nameUriNsPart.label == 'apni-name') return Name.findBySourceSystemAndSourceId('PLANT_NAME', node.nameUriIdPart as Long);
+        if (node.nameUriNsPart.label == 'apni-name') return Name.findByNamespaceAndSourceSystemAndSourceId(node.root.namespace, 'PLANT_NAME', node.nameUriIdPart as Long);
         return null;
     }
 
@@ -844,7 +802,7 @@ select distinct start_id from ll where supernode_id = ?
         if (node.instance) return node.instance;
         if (!node.taxonUriNsPart || !node.taxonUriIdPart) return null;
         if (node.taxonUriNsPart.label == 'nsl-instance') return Instance.get(node.taxonUriIdPart as Long);
-        if (node.taxonUriNsPart.label == 'apni-taxon') return Instance.findBySourceSystemAndSourceId('PLANT_NAME_REFERENCE', node.taxonUriIdPart as Long)
+        if (node.taxonUriNsPart.label == 'apni-taxon') return Instance.findByNamespaceAndSourceSystemAndSourceId(node.root.namespace, 'PLANT_NAME_REFERENCE', node.taxonUriIdPart as Long)
         return null;
     }
 
