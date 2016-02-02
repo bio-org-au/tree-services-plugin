@@ -264,6 +264,76 @@ class BasicOperationsService {
     }
 
     /**
+     * A user workspace is structured the same as a classification.
+     * It has an owner, and the top-level nodes have different URI types.
+     * @param label
+     * @param description
+     * @return
+     */
+
+    Arrangement createWorkspace(Event event, String owner, String title, String description) {
+        mustHave(event: event, owner: owner, title: title) {
+            clearAndFlush {
+                event = DomainUtils.refetchEvent(event)
+
+                Arrangement workspace = new Arrangement(
+                        namespace: event.namespace,
+                        arrangementType: ArrangementType.U,
+                        synthetic: 'N',
+                        owner: owner,
+                        title: title,
+                        description: description)
+                workspace.save();
+
+                Node workspaceNode = new Node(
+                        root: workspace,
+                        internalType: NodeInternalType.S,
+                        typeUriNsPart: UriNs.get(1),
+                        typeUriIdPart: 'workspace-node',
+                        synthetic: false,
+                        checkedInAt: event
+                )
+                workspaceNode.save();
+
+                Node workspaceRoot = new Node(
+                        root: workspace,
+                        internalType: NodeInternalType.S,
+                        typeUriNsPart: UriNs.get(1),
+                        typeUriIdPart: 'workspace-root',
+                        synthetic: false,
+                        checkedInAt: event
+                )
+
+                workspaceRoot.save()
+
+                // I have to do this here and not earlier because GORM is too fsking clever
+                // it thinks that because Arrangement only has one attribute of type
+                // Node, that when you save a node with its arrangment set, the arrangemnt
+                // node also has to be set. Grr.
+
+                workspace.node = workspaceNode
+                workspace.save();
+
+                Link workspaceRootLink = new Link(
+                        supernode: workspaceNode,
+                        subnode: workspaceRoot,
+                        typeUriNsPart: UriNs.get(1),
+                        typeUriIdPart: 'workspace-root-link',
+                        versioningMethod: VersioningMethod.T,
+                        linkSeq: 1,
+                        synthetic: false
+                )
+
+                workspaceRootLink.save()
+                workspaceNode.addToSubLink(workspaceRootLink)
+                workspaceNode.save()
+
+                return workspace
+            } as Arrangement
+        } as Arrangement
+    }
+
+    /**
      *
      * @param params[nodeType] Uri
      * @param params[linkType] Uri

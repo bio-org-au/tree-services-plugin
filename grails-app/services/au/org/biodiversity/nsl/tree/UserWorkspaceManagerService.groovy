@@ -26,12 +26,12 @@ class UserWorkspaceManagerService {
     DataSource dataSource_nsl;
 
 
-    Arrangement createWorkspace(String username, String description) {
-        if(!username) throw new IllegalArgumentException("Username mak not be null");
+    Arrangement createWorkspace(Namespace namespace, String owner, String title, String description) {
+        if(!owner) throw new IllegalArgumentException("owner may not be null");
+        if(!title) throw new IllegalArgumentException("title may not be null");
 
-
-
-        return null;
+        Event e = basicOperationsService.newEvent namespace, "Create workspace", owner
+        return basicOperationsService.createWorkspace(e, owner, title, description)
     }
 
 }
