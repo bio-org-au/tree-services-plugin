@@ -333,6 +333,37 @@ class BasicOperationsService {
         } as Arrangement
     }
 
+    void updateArrangement(Arrangement arrangement, String title, String description) {
+        mustHave(arrangement: arrangement) {
+            clearAndFlush {
+                arrangement = DomainUtils.refetchArrangement(arrangement)
+
+                switch(arrangement.arrangementType) {
+                    case ArrangementType.E:
+                        throw new IllegalArgumentException("The end tree cannot be modified");
+                        break;
+
+                    case ArrangementType.P:
+                    break;
+
+                    case ArrangementType.U:
+                        if(!title) {
+                            throw new IllegalArgumentException("Workspaces must have a title");
+                        }
+                    break;
+
+                    case ArrangementType.Z:
+                        throw new IllegalArgumentException("Temp trees cannot be modified");
+                    break;
+                }
+
+                arrangement.title = title;
+                arrangement.description = description;
+                arrangement.save();
+            }
+        }
+    }
+
     /**
      *
      * @param params[nodeType] Uri

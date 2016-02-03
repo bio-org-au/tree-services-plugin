@@ -39,4 +39,11 @@ class UserWorkspaceManagerService {
         if(!arrangement.arrangementType == ArrangementType.U)  throw new IllegalArgumentException("arrangement must be a workspace");
         basicOperationsService.deleteArrangement(arrangement);
     }
+
+
+    void updateWorkspace(Arrangement arrangement, String title, String description) {
+        if(!arrangement) throw new IllegalArgumentException("arrangement may not be null");
+        if(!arrangement.arrangementType == ArrangementType.U)  throw new IllegalArgumentException("arrangement must be a workspace");
+        basicOperationsService.updateArrangement(arrangement, title, description);
+    }
 }
