@@ -34,4 +34,9 @@ class UserWorkspaceManagerService {
         return basicOperationsService.createWorkspace(e, owner, title, description)
     }
 
+    void deleteWorkspace(Arrangement arrangement) {
+        if(!arrangement) throw new IllegalArgumentException("arrangement may not be null");
+        if(!arrangement.arrangementType == ArrangementType.U)  throw new IllegalArgumentException("arrangement must be a workspace");
+        basicOperationsService.deleteArrangement(arrangement);
+    }
 }
