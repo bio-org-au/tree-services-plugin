@@ -301,7 +301,8 @@ class BasicOperationsService {
                         typeUriNsPart: UriNs.get(1),
                         typeUriIdPart: 'workspace-root',
                         synthetic: false,
-                        checkedInAt: event
+                        // the workspace root is created in draft mode
+                        // checkedInAt: event
                 )
 
                 workspaceRoot.save()
