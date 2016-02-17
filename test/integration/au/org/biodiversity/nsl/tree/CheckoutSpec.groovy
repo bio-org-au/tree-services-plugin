@@ -55,7 +55,7 @@ class CheckoutSpec extends Specification {
 
     void "test simple node checkout"() {
         when:
-        Event e = basicOperationsService.newEventTs(new Timestamp(System.currentTimeMillis()), 'TEST', 'test simple node checkout')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new Timestamp(System.currentTimeMillis()), 'TEST', 'test simple node checkout')
 
         SomeStuff s1 = makeSampleTree()
         SomeStuff s2 = makeSampleTree()
@@ -111,7 +111,7 @@ class CheckoutSpec extends Specification {
 
     void "test a checkout that would result in a draft node attached more than once"() {
         when:
-        Event e = basicOperationsService.newEventTs(new Timestamp(System.currentTimeMillis()), 'TEST', 'test a checkout that would result in a draft node attached more than once')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new Timestamp(System.currentTimeMillis()), 'TEST', 'test a checkout that would result in a draft node attached more than once')
         SomeStuff s1 = makeSampleTree()
         SomeStuff s2 = makeSampleTree()
 
@@ -141,7 +141,7 @@ class CheckoutSpec extends Specification {
 
     void "test a checkout and undo"() {
         when:
-        Event e = basicOperationsService.newEventTs(new Timestamp(System.currentTimeMillis()), 'TEST', 'test a checkout and undo')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new Timestamp(System.currentTimeMillis()), 'TEST', 'test a checkout and undo')
         SomeStuff s1 = makeSampleTree()
         SomeStuff s2 = makeSampleTree()
         basicOperationsService.persistNode(e, s2.t.node)

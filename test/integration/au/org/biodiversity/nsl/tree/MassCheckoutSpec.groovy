@@ -55,7 +55,7 @@ public class MassCheckoutSpec extends Specification {
 		
 		
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'attempt a mass checkout')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'attempt a mass checkout')
 
 		SomeStuffEmptyTree s1 = makeSampleEmptyTree() // the working tree
 		SomeStuff s2 = makeSampleTree() // some sample data

@@ -57,7 +57,7 @@ class ProfileItemSpec  extends Specification {
 
 	def 'simple create and update'() {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'simple create and update')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'simple create and update')
 		SomeStuff s = makeSampleTree()
 		s.reload()
 

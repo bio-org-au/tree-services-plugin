@@ -58,7 +58,7 @@ class PerformVersioningSpec extends Specification {
 
 	void "test versioning" () {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning')
 		SomeStuff s1 = makeSampleTree()
 		SomeStuff s2 = makeSampleTree()
 		basicOperationsService.persistNode(e, s1.t.node)
@@ -101,7 +101,7 @@ class PerformVersioningSpec extends Specification {
 
 	void "test versioning replacing 2" () {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning replacing 2')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning replacing 2')
 		SomeStuff s1 = makeSampleTree()
 		SomeStuff s2 = makeSampleTree()
 		basicOperationsService.persistNode(e, s1.t.node)
@@ -147,7 +147,7 @@ class PerformVersioningSpec extends Specification {
 
 	void "test versioning replacing parent and child" () {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning replacing parent and child')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning replacing parent and child')
 		SomeStuff s1 = makeSampleTree()
 		SomeStuff s2 = makeSampleTree()
 		basicOperationsService.persistNode(e, s1.t.node)
@@ -179,7 +179,7 @@ class PerformVersioningSpec extends Specification {
 
 	void "test versioning replacing parent and child without orphans" () {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning replacing parent and child without orphans')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test versioning replacing parent and child without orphans')
 		SomeStuff s1 = makeSampleTree()
 		SomeStuff s2 = makeSampleTree()
 		basicOperationsService.persistNode(e, s1.t.node)
@@ -230,7 +230,7 @@ class PerformVersioningSpec extends Specification {
 		 * then persist and version the changes
 		 */
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test a more-or-less believable versioning')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test a more-or-less believable versioning')
 		SomeStuffWithHistory afd = makeSampleTreeWithHistory()
 		SomeStuffEmptyTree ws = makeSampleEmptyTree()
 
