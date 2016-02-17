@@ -51,7 +51,7 @@ class PersistADraftTreeSpec extends Specification {
 
     void "make a sample tree and persist it"() {
         when:
-        Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'make a sample tree and persist it')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'make a sample tree and persist it')
         SomeStuff s = makeSampleTree()
 
         println queryService.dumpNodes([s.t.node])
@@ -133,7 +133,7 @@ class PersistADraftTreeSpec extends Specification {
 
     void "put tree in an illegal state and attempt to persist it"() {
         when:
-        Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'put tree in an illegal state and attempt to persist it')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'put tree in an illegal state and attempt to persist it')
         SomeStuff s1 = makeSampleTree()
         SomeStuff s2 = makeSampleTree()
 

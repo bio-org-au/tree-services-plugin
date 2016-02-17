@@ -40,7 +40,7 @@ class TreeProfileItemsSpec extends Specification {
     def "create and modify profile data"() {
         when: "create a node"
 
-        Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'create and modify profile data')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'create and modify profile data')
         Arrangement t = basicOperationsService.createClassification(e, 'test', 'test')
 
         // I am using LSIDs for the sample uris just to annoy Greg if he ever finds out

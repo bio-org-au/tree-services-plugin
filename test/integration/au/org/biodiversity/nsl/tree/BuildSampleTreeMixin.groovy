@@ -17,6 +17,7 @@
 package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.Arrangement
+import au.org.biodiversity.nsl.Namespace
 import au.org.biodiversity.nsl.Node
 import au.org.biodiversity.nsl.NodeInternalType
 import au.org.biodiversity.nsl.VersioningMethod
@@ -27,7 +28,20 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
+class TreeTestUtil {
+    static Namespace getTestNamespace() {
+        Namespace n = Namespace.findByName('TREETEST')
+        if(!n) {
+            n = new Namespace(name: 'TREETEST', descriptionHtml: 'Tree Services Plugin integration tests')
+            n.save();
+        }
+        return n;
+    }
+}
+
 class BuildSampleTreeMixin {
+
+
     SomeStuff makeSampleTree() {
         SomeStuff s = new SomeStuff(sessionFactory_nsl, basicOperationsService)
         s.makeTree()
@@ -52,6 +66,8 @@ class BuildSampleTreeMixin {
 }
 
 class BuildSampleTreeUtil {
+
+
     static void dumpStuff(final SessionFactory sessionFactory_nsl, final Log log, final List stuff) {
         HibernateSessionUtils.doWork sessionFactory_nsl, { Connection cnct ->
             log.debug("----")
@@ -138,7 +154,7 @@ class SomeStuffEmptyTree {
     }
 
     void makeTree() {
-        t = basicOperationsService.createTemporaryArrangement()
+        t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace())
         tid = t.id
         root = t.node
         rootid = root.id
@@ -176,7 +192,7 @@ class SomeStuff extends SomeStuffEmptyTree {
     }
 
     void makeTree() {
-        t = basicOperationsService.createTemporaryArrangement()
+        t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace())
         tid = t.id
         root = t.node
         rootid = root.id
@@ -227,7 +243,7 @@ class SomeStuffWithHistory extends SomeStuff {
     }
 
     void makeTree() {
-        t = basicOperationsService.createTemporaryArrangement()
+        t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace(), )
         tid = t.id
         root = t.node
         rootid = root.id

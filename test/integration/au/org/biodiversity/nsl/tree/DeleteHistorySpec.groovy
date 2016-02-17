@@ -56,7 +56,7 @@ class DeleteHistorySpec extends Specification {
     void "test simple case"() {
         // this will be very, very simple
 
-        Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test simple case')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test simple case')
 
         SomeStuffEmptyTree s = makeSampleEmptyTree()
         SomeStuffEmptyTree ws = makeSampleEmptyTree()

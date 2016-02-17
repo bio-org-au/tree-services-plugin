@@ -54,7 +54,7 @@ class AdoptNodeSpec extends Specification {
 
 	void "test simple node adoption"() {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test simple node adoption')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test simple node adoption')
 		
 		SomeStuff s1 = makeSampleTree()
 		SomeStuff s2 = makeSampleTree()
@@ -89,7 +89,7 @@ class AdoptNodeSpec extends Specification {
 
 	void "test adopting into persistent node"() {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test adopting into persistent node')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test adopting into persistent node')
 		
 		SomeStuff s1 = makeSampleTree()
 		SomeStuff s2 = makeSampleTree()

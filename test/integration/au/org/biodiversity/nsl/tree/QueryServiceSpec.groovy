@@ -53,7 +53,7 @@ class QueryServiceSpec extends Specification {
 
 	void "test getStatistics simple"() {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test getStatistics simple')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test getStatistics simple')
 		
 		SomeStuff s1 = makeSampleTree()
 		
@@ -65,7 +65,7 @@ class QueryServiceSpec extends Specification {
 
 	void "test getDependencies simple"() {
 		when:
-		Event e = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test getDependencies simple')
+		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test getDependencies simple')
 		
 		SomeStuff s1 = makeSampleTree()
 		

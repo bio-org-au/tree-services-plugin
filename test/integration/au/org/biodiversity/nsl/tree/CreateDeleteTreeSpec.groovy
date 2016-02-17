@@ -63,7 +63,7 @@ class CreateDeleteTreeSpec extends Specification {
         sessionFactory_nsl.currentSession.flush();
         sessionFactory_nsl.currentSession.clear();
 
-        treeid = basicOperationsService.createTemporaryArrangement().id
+        treeid = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace()).id
         sessionFactory_nsl.currentSession.flush();
         sessionFactory_nsl.currentSession.clear();
 
@@ -121,7 +121,7 @@ class CreateDeleteTreeSpec extends Specification {
     void "test using session.clear to reset hibernate"() {
         when:
         long treeid
-        treeid = basicOperationsService.createTemporaryArrangement().id
+        treeid = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace()).id
         sessionFactory_nsl.currentSession.clear();
 
         int ct
@@ -168,7 +168,7 @@ class CreateDeleteTreeSpec extends Specification {
     void "test that refresh fails"() {
         when:
         long treeid
-        treeid = basicOperationsService.createTemporaryArrangement().id
+        treeid = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace()).id
         sessionFactory_nsl.currentSession.clear();
 
         int ct
@@ -201,7 +201,7 @@ class CreateDeleteTreeSpec extends Specification {
     void "test using session.evict to reset hibernate"() {
         when:
         long treeid
-        treeid = basicOperationsService.createTemporaryArrangement().id
+        treeid = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace()).id
         sessionFactory_nsl.currentSession.clear();
 
         Arrangement t = Arrangement.get(treeid)
@@ -220,7 +220,7 @@ class CreateDeleteTreeSpec extends Specification {
 
     void "test create and delete an arrangement with subnodes"() {
         when:
-        Arrangement t = basicOperationsService.createTemporaryArrangement()
+        Arrangement t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace())
 
         then:
         t.id
@@ -275,7 +275,7 @@ class CreateDeleteTreeSpec extends Specification {
 
     void "test delete single node"() {
         when:
-        Arrangement t = basicOperationsService.createTemporaryArrangement()
+        Arrangement t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace())
         Node node1 = basicOperationsService.createDraftNode t.node, VersioningMethod.V, NodeInternalType.T, seq: 1
         Node node2 = basicOperationsService.createDraftNode node1, VersioningMethod.V, NodeInternalType.T, seq: 1
 
@@ -312,7 +312,7 @@ class CreateDeleteTreeSpec extends Specification {
 
     void "test delete single node with a subnode"() {
         when:
-        Arrangement t = basicOperationsService.createTemporaryArrangement()
+        Arrangement t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace())
         Node node1 = basicOperationsService.createDraftNode t.node, VersioningMethod.V, NodeInternalType.T, seq: 1, foo: 'bar'
         Node node2 = basicOperationsService.createDraftNode node1, VersioningMethod.V, NodeInternalType.T, seq: 1, foo: 'bar'
         Node node3 = basicOperationsService.createDraftNode node2, VersioningMethod.V, NodeInternalType.T, seq: 1, foo: 'bar'
@@ -353,7 +353,7 @@ class CreateDeleteTreeSpec extends Specification {
 
     void "test delete node subtree"() {
         when:
-        Arrangement t = basicOperationsService.createTemporaryArrangement()
+        Arrangement t = basicOperationsService.createTemporaryArrangement(TreeTestUtil.getTestNamespace())
         Node node1 = basicOperationsService.createDraftNode t.node, VersioningMethod.V, NodeInternalType.T, seq: 1
         Node node2 = basicOperationsService.createDraftNode node1, VersioningMethod.V, NodeInternalType.T, seq: 1
         Node node3 = basicOperationsService.createDraftNode node2, VersioningMethod.V, NodeInternalType.T, seq: 1

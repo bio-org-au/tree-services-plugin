@@ -54,7 +54,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     void "test find a current node"() {
         when:
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test find a current node')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test find a current node')
         SomeStuff tree = makeSampleTree()
 
         Arrangement arrangement = tree.t
@@ -75,7 +75,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     void "test find a current taxon"() {
         when:
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test find a current taxon')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test find a current taxon')
         SomeStuff tree = makeSampleTree()
 
         Arrangement arrangement = tree.t
@@ -94,7 +94,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     void "test add node"() {
         when:
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test add node')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test add node')
         Arrangement arrangement = basicOperationsService.createClassification(event, 'test', 'test add node')
 
         if (!DomainUtils.getSingleSubnode(arrangement.node)) {
@@ -126,7 +126,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     void "test add node with bad name id"() {
         when:
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test add node with bad name id')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test add node with bad name id')
         Arrangement arrangement = basicOperationsService.createClassification(event, 'test', 'test add node with bad name id')
 
         if (!DomainUtils.getSingleSubnode(arrangement.node)) {
@@ -155,7 +155,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     void "test add node with bad taxon id"() {
         when:
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test add node with bad name id')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test add node with bad name id')
         Arrangement arrangement = basicOperationsService.createClassification(event, 'test', 'test add node with bad name id')
 
         if (!DomainUtils.getSingleSubnode(arrangement.node)) {
@@ -184,7 +184,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     void "test changing a node"() {
         when: "we create a new tree and add a couple of nodes"
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test changing a node')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test changing a node')
         Arrangement arrangement = basicOperationsService.createClassification(event, 'test', 'test add node')
 
         Uri name1Uri = DomainUtils.uri('afd-name', '1')
@@ -255,7 +255,7 @@ class TreeOperationsServiceSpec extends Specification {
 
     def "test deleting a node"() {
         when: "we create a new tree and add a couple of nodes"
-        Event event = basicOperationsService.newEventTs(new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test deleting a node')
+        Event event = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test deleting a node')
         Arrangement arrangement = basicOperationsService.createClassification(event, 'test', 'test add node')
 
         Uri name1Uri = DomainUtils.uri('afd-name', '1')
