@@ -178,7 +178,7 @@ class BasicOperationsService {
         if(!namespace) throw new IllegalArgumentException("null namespace");
         clearAndFlush {
             // temporary arangments do not belong to any shard
-            Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y', namespace: namespace)
+            Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y', namespace: namespace, owner: 'INTERNAL')
             tempArrangement.save()
             Node tempNode = new Node(
                     root: tempArrangement,
@@ -212,7 +212,9 @@ class BasicOperationsService {
                         arrangementType: ArrangementType.P,
                         synthetic: 'N',
                         label: label,
-                        description: description)
+                        description: description,
+                        owner: event.authUser
+                )
                 classification.save();
 
                 Node classificationNode = new Node(
