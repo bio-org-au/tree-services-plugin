@@ -2,6 +2,7 @@ package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.ArrangementType
+import au.org.biodiversity.nsl.NodeInternalType
 
 import javax.sql.DataSource
 
@@ -60,6 +61,24 @@ class CreateDeleteWorkspaceSpec extends Specification {
         t.arrangementType == ArrangementType.U
         t.title == 'test workspace'
         t.description
+
+        // workspace node should be a workspace-node
+
+        t.node.typeUriIdPart == 'workspace-node'
+
+        // it should have one subnode
+
+        t.node.subLink.size() == 1
+        t.node.subLink.first().versioningMethod == VersioningMethod.T
+        t.node.subLink.first().typeUriIdPart == 'workspace-root-link'
+
+        // which should be a workspace root
+        t.node.subLink.first().subnode.internalType == NodeInternalType.S
+        t.node.subLink.first().subnode.typeUriIdPart == 'workspace-root'
+
+        // and it shouold be a draft node
+
+        !t.node.subLink.first().subnode.checkedInAt
 
         when:
         sessionFactory_nsl.currentSession.flush();
