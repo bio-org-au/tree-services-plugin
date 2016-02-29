@@ -303,11 +303,21 @@ class BasicOperationsService {
                         typeUriNsPart: UriNs.get(1),
                         typeUriIdPart: 'workspace-root',
                         synthetic: false,
-                        // the workspace root is created in draft mode
-                        // checkedInAt: event
+                        checkedInAt: event
                 )
 
                 workspaceRoot.save()
+
+                Node workspaceWorkingRoot = new Node(
+                        root: workspace,
+                        internalType: NodeInternalType.S,
+                        typeUriNsPart: UriNs.get(1),
+                        typeUriIdPart: 'workspace-root',
+                        synthetic: false,
+                        prev: workspaceRoot
+                        // the working root is not checked in - it is created in draft mode.
+                )
+                workspaceWorkingRoot.save();
 
                 // I have to do this here and not earlier because GORM is too fsking clever
                 // it thinks that because Arrangement only has one attribute of type
@@ -315,6 +325,7 @@ class BasicOperationsService {
                 // node also has to be set. Grr.
 
                 workspace.node = workspaceNode
+                workspace.workingRoot = workspaceWorkingRoot
                 workspace.save();
 
                 Link workspaceRootLink = new Link(
@@ -978,6 +989,7 @@ class BasicOperationsService {
                 }
 
                 arrangement.node = null
+                arrangement.workingRoot = null
                 arrangement.save(flush: true) // must do this before we can delete the arangement node
                 Link.executeUpdate('delete from Link where supernode in (select n from Node n where n.root = :arrangement)', [arrangement: arrangement])
                 Node.executeUpdate('delete from Node where root = :arrangement', [arrangement: arrangement])

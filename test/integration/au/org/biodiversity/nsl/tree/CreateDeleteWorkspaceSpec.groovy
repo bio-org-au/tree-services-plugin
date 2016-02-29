@@ -3,14 +3,15 @@ package au.org.biodiversity.nsl.tree
 import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.ArrangementType
 import au.org.biodiversity.nsl.NodeInternalType
+import au.org.biodiversity.nsl.Node
+import au.org.biodiversity.nsl.Event;
+import au.org.biodiversity.nsl.Link;
 
 import javax.sql.DataSource
 
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.hibernate.SessionFactory
-import au.org.biodiversity.nsl.Event;
-import au.org.biodiversity.nsl.Link;
 import au.org.biodiversity.nsl.VersioningMethod;
 import spock.lang.*
 
@@ -69,16 +70,38 @@ class CreateDeleteWorkspaceSpec extends Specification {
         // it should have one subnode
 
         t.node.subLink.size() == 1
-        t.node.subLink.first().versioningMethod == VersioningMethod.T
-        t.node.subLink.first().typeUriIdPart == 'workspace-root-link'
+
+        when:
+        Link wsRootLink = t.node.subLink.first()
+        Node wsRoot = wsRootLink.subnode
+        Node wsWorkingRoot = t.workingRoot
+
+        then:
+
+        wsRootLink.versioningMethod == VersioningMethod.T
+        wsRootLink.typeUriIdPart == 'workspace-root-link'
 
         // which should be a workspace root
-        t.node.subLink.first().subnode.internalType == NodeInternalType.S
-        t.node.subLink.first().subnode.typeUriIdPart == 'workspace-root'
+        wsRoot.internalType == NodeInternalType.S
+        wsRoot.typeUriIdPart == 'workspace-root'
 
-        // and it shouold be a draft node
+        // and it should not be a draft node
+        wsRoot.checkedInAt
 
-        !t.node.subLink.first().subnode.checkedInAt
+        //it should have a working root
+
+        wsWorkingRoot
+
+        // which should be a workspace root
+        wsWorkingRoot.internalType == NodeInternalType.S
+        wsWorkingRoot.typeUriIdPart == 'workspace-root'
+
+        // and it should be a draft node
+        !wsWorkingRoot.checkedInAt
+
+        // that is a branch off the root
+
+        wsWorkingRoot.prev == wsRoot
 
         when:
         sessionFactory_nsl.currentSession.flush();
