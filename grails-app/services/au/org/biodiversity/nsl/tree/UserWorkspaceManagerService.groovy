@@ -26,12 +26,18 @@ class UserWorkspaceManagerService {
     DataSource dataSource_nsl;
 
 
-    Arrangement createWorkspace(Namespace namespace, String owner, String title, String description) {
+    Arrangement createWorkspace(Namespace namespace, String owner, String title, String description, Node checkout) {
         if(!owner) throw new IllegalArgumentException("owner may not be null");
         if(!title) throw new IllegalArgumentException("title may not be null");
 
         Event e = basicOperationsService.newEvent namespace, "Create workspace", owner
-        return basicOperationsService.createWorkspace(e, owner, title, description)
+        Arrangement ws = basicOperationsService.createWorkspace(e, owner, title, description)
+
+        if(checkout) {
+            basicOperationsService.adoptNode(ws.workingRoot, checkout, VersioningMethod.V, linkType: DomainUtils.getBoatreeUri('workspace-top-node'));
+        }
+
+        return ws;
     }
 
     void deleteWorkspace(Arrangement arrangement) {
