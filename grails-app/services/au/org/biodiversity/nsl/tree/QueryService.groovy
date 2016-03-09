@@ -638,6 +638,44 @@ select distinct start_id from ll where supernode_id = ?
         return l;
     }
 
+    List<Link> findPathLinks(Node root, Node focus) {
+            List<Link> l = new ArrayList<Node>();
+
+        doWork(sessionFactory_nsl) { Connection cnct ->
+            withQ cnct, '''
+                with recursive scan_up as (
+                  select l.id, l.supernode_id, l.subnode_id from tree_link l where l.subnode_id = 2911500
+                union all
+                  select l.id, l.supernode_id, l.subnode_id from tree_link l, scan_up where l.subnode_id = scan_up.supernode_id and scan_up.supernode_id <> 4952426
+                ),
+                scan_down as (
+                  select scan_up.* from scan_up where scan_up.supernode_id = 4952426
+                union all
+                  select scan_up.* from scan_up, scan_down where scan_up.supernode_id = scan_down.subnode_id and scan_down.supernode_id <> 2911500
+                )
+                select * from scan_down
+        ''',
+            { PreparedStatement qry ->
+                qry.setLong(1, focus.id)
+                qry.setLong(2, root.id)
+                qry.setLong(3, root.id)
+                qry.setLong(4, focus.id)
+                ResultSet rs = qry.executeQuery()
+
+                try {
+                    while(rs.next()) {
+                        l.add(Link.get(rs.getLong(1)));
+                    }
+                }
+                finally {
+                    rs.close()
+                }
+            }
+        }
+
+        return l;
+    }
+
     // This method returns a branch object. A branch object contains a top node, its placements, and its entire subnode tree.
 
     public static class Tree {
