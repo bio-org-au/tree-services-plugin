@@ -21,11 +21,10 @@ import au.org.biodiversity.nsl.Instance
 import au.org.biodiversity.nsl.Name
 import au.org.biodiversity.nsl.Reference
 import grails.util.Holders
+import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.i18n.LocaleContextHolder
 
-class Message {
-    // this won't work - this object is not a service
-    // def messageSource
+class Message implements MessageSourceResolvable {
     public final Msg msg
     public final List args = []
     public final List nested = []
@@ -57,6 +56,41 @@ class Message {
         StringBuilder sb = new StringBuilder()
         buildNestedString(sb, 0)
         return sb.toString()
+    }
+
+    String[] getCodes() {
+        String[] codes = new String[1];
+        codes[0] = msg.key;
+        return codes;
+    }
+
+    /**
+     * Return the array of arguments to be used to resolve this message.
+     * @return an array of objects to be used as parameters to replace
+     * placeholders within the message text
+     * @see java.text.MessageFormat
+     */
+    Object[] getArguments() {
+        Object[] av = new Object[args.size()];
+        for(int i = 0; i<args.size(); i++) av[i] = args.get(i);
+        return av;
+    }
+
+    /**
+     * Return the default message to be used to resolve this message.
+     * @return the default message, or {@code null} if no default
+     */
+    String getDefaultMessage() {
+        StringBuilder s = new StringBuilder();
+        s.append(msg.name());
+        if(args && args.size() > 0) {
+            for(int i = 0; i<args.size(); i++) {
+                s.append(i==0? ": {" : ", {");
+                s.append(i);
+                s.append("}");
+            };
+        }
+        return s.toString();
     }
 
     protected void buildNestedString(StringBuilder sb, int depth) {

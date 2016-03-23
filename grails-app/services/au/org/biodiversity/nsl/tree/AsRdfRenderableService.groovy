@@ -26,6 +26,8 @@ import org.springframework.validation.ObjectError
 /**
  * Convert various dsl objects to rdf.
  * The point of this class is that it should be more-or-less the only place that cares about the RDF vocabulary.
+ *
+ * @deprecated We now use d2r for all our RDF needs.
  */
 
 

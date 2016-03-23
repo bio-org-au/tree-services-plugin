@@ -15,9 +15,12 @@
 */
 
 package au.org.biodiversity.nsl.tree
+
+import org.springframework.context.MessageSourceResolvable
+
 // this is unnecessarily complicated and not at all groovy. I should be passing around maps, which groovy can convert straight into JSON.
 
-class ServiceException extends Exception {
+class ServiceException extends Exception implements MessageSourceResolvable {
     public final Message msg // the top level item. We make this an item so that it can be rendered using the same code as all the other items.
 
     protected ServiceException(Message msg) {
@@ -40,5 +43,20 @@ class ServiceException extends Exception {
 
     public String getLocalizedMessage() {
         return msg.getLocalisedString();
+    }
+
+    @Override
+    String[] getCodes() {
+        return msg.getCodes();
+    }
+
+    @Override
+    Object[] getArguments() {
+        msg.getArguments();
+    }
+
+    @Override
+    String getDefaultMessage() {
+        return msg.getDefaultMessage();
     }
 }
