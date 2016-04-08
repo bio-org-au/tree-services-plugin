@@ -205,7 +205,7 @@ class ClassificationManagerService {
         validationResults.c = [:];
 
         Arrangement.findAll { arrangementType == ArrangementType.P }.each {
-            if(!validationResults.c[it.namespace.name]) validationResults.c[it.namespace.name] = [:]
+            if (!validationResults.c[it.namespace.name]) validationResults.c[it.namespace.name] = [:]
             validationResults.c[it.namespace.name][it.label] = validate(it)
         }
 
@@ -221,7 +221,7 @@ class ClassificationManagerService {
         results.addAll(validate_instances_appear_once(classification));
         results.addAll(validate_current_nodes_have_one_curent_parent_node(classification));
 
-        return results ?: [ [msg: "No errors", level: 'success', nested: []]  ];
+        return results ?: [[msg: "No errors", level: 'success', nested: []]];
     }
 
     // TODO: namespace checks
@@ -232,16 +232,16 @@ class ClassificationManagerService {
         Sql sql = Sql.newInstance(dataSource_nsl);
         try {
             def ct = sql.firstRow("""
-select count(*) as ct
-from
+SELECT count(*) AS ct
+FROM
   tree_arrangement a
-  join tree_node n on a.id = n.tree_arrangement_id
-where
+  JOIN tree_node n ON a.id = n.tree_arrangement_id
+WHERE
   a.id = ?
-  and (
-    (n.next_node_id is null and n.replaced_at_id is not null)
-    or
-    (n.next_node_id is not null and n.replaced_at_id is null)
+  AND (
+    (n.next_node_id IS NULL AND n.replaced_at_id IS NOT NULL)
+    OR
+    (n.next_node_id IS NOT NULL AND n.replaced_at_id IS NULL)
   )
             """, [classification.id]).ct
 
@@ -250,16 +250,16 @@ where
                 result << msg
 
                 sql.eachRow("""
-select n.id, n.next_node_id, n.replaced_at_id
-from
+SELECT n.id, n.next_node_id, n.replaced_at_id
+FROM
   tree_arrangement a
-  join tree_node n on a.id = n.tree_arrangement_id
-where
+  JOIN tree_node n ON a.id = n.tree_arrangement_id
+WHERE
   a.id = ?
-  and (
-    (n.next_node_id is null and n.replaced_at_id is not null)
-    or
-    (n.next_node_id is not null and n.replaced_at_id is null)
+  AND (
+    (n.next_node_id IS NULL AND n.replaced_at_id IS NOT NULL)
+    OR
+    (n.next_node_id IS NOT NULL AND n.replaced_at_id IS NULL)
   )
 LIMIT 5
             """, [classification.id]) {
@@ -286,21 +286,21 @@ LIMIT 5
         Sql sql = Sql.newInstance(dataSource_nsl);
         try {
             def ct = sql.firstRow("""
-select count(*) as ct
-from
+SELECT count(*) AS ct
+FROM
   tree_arrangement a
-  join tree_node n on a.id = n.tree_arrangement_id
-where
+  JOIN tree_node n ON a.id = n.tree_arrangement_id
+WHERE
   a.id = ?
-  and n.next_node_id is null
-  and n.internal_type in ('T','D')
-  and not exists (
-    select pn.id
-    from tree_link l
-    join tree_node pn on l.supernode_id = pn.id
-    where l.subnode_id = n.id
-      and pn.tree_arrangement_id=n.tree_arrangement_id
-      and pn.next_node_id is null
+  AND n.next_node_id IS NULL
+  AND n.internal_type IN ('T','D')
+  AND NOT exists (
+    SELECT pn.id
+    FROM tree_link l
+    JOIN tree_node pn ON l.supernode_id = pn.id
+    WHERE l.subnode_id = n.id
+      AND pn.tree_arrangement_id=n.tree_arrangement_id
+      AND pn.next_node_id IS NULL
   )
 LIMIT 5
             """, [classification.id]).ct
@@ -310,21 +310,21 @@ LIMIT 5
                 result << msg
 
                 sql.eachRow("""
-select n.id
-from
+SELECT n.id
+FROM
   tree_arrangement a
-  join tree_node n on a.id = n.tree_arrangement_id
-where
+  JOIN tree_node n ON a.id = n.tree_arrangement_id
+WHERE
   a.id = ?
-  and n.next_node_id is null
-  and n.internal_type in ('T','D')
-  and not exists (
-    select pn.id
-    from tree_link l
-    join tree_node pn on l.supernode_id = pn.id
-    where l.subnode_id = n.id
-      and pn.tree_arrangement_id=n.tree_arrangement_id
-      and pn.next_node_id is null
+  AND n.next_node_id IS NULL
+  AND n.internal_type IN ('T','D')
+  AND NOT exists (
+    SELECT pn.id
+    FROM tree_link l
+    JOIN tree_node pn ON l.supernode_id = pn.id
+    WHERE l.subnode_id = n.id
+      AND pn.tree_arrangement_id=n.tree_arrangement_id
+      AND pn.next_node_id IS NULL
   )
 LIMIT 5
             """, [classification.id]) {
@@ -352,18 +352,18 @@ LIMIT 5
         Sql sql = Sql.newInstance(dataSource_nsl);
         try {
             def ct = sql.firstRow("""
-select count(*) as ct from (
-  select n.name_id, count(*) as ct
-  from
+SELECT count(*) AS ct FROM (
+  SELECT n.name_id, count(*) AS ct
+  FROM
     tree_arrangement a
-    join tree_node n on a.id = n.tree_arrangement_id
-  where
+    JOIN tree_node n ON a.id = n.tree_arrangement_id
+  WHERE
     a.id = ?
-    and n.name_id is not null
-    and n.next_node_id is null
-  group by n.name_id
-  having count(*) > 1
-) as multiname
+    AND n.name_id IS NOT NULL
+    AND n.next_node_id IS NULL
+  GROUP BY n.name_id
+  HAVING count(*) > 1
+) AS multiname
             """, [classification.id]).ct
 
             if (ct > 0) {
@@ -371,16 +371,16 @@ select count(*) as ct from (
                 result << msg
 
                 sql.eachRow("""
-  select n.name_id, count(*) as ct
-  from
+  SELECT n.name_id, count(*) AS ct
+  FROM
     tree_arrangement a
-    join tree_node n on a.id = n.tree_arrangement_id
-  where
+    JOIN tree_node n ON a.id = n.tree_arrangement_id
+  WHERE
     a.id = ?
-    and n.name_id is not null
-    and n.next_node_id is null
-  group by n.name_id
-  having count(*) > 1
+    AND n.name_id IS NOT NULL
+    AND n.next_node_id IS NULL
+  GROUP BY n.name_id
+  HAVING count(*) > 1
   LIMIT 5
             """, [classification.id]) {
                     msg.nested << [msg   : "${Name.get(it.name_id).fullName} appears ${it.ct} times (name id: ${it.name_id})",
@@ -405,18 +405,18 @@ select count(*) as ct from (
         Sql sql = Sql.newInstance(dataSource_nsl);
         try {
             def ct = sql.firstRow("""
-select count(*) as ct from (
-  select n.instance_id, count(*) as ct
-  from
+SELECT count(*) AS ct FROM (
+  SELECT n.instance_id, count(*) AS ct
+  FROM
     tree_arrangement a
-    join tree_node n on a.id = n.tree_arrangement_id
-  where
+    JOIN tree_node n ON a.id = n.tree_arrangement_id
+  WHERE
     a.id = ?
-    and n.instance_id is not null
-    and n.next_node_id is null
-  group by n.instance_id
-  having count(*) > 1
-) as multiname
+    AND n.instance_id IS NOT NULL
+    AND n.next_node_id IS NULL
+  GROUP BY n.instance_id
+  HAVING count(*) > 1
+) AS multiname
             """, [classification.id]).ct
 
             if (ct > 0) {
@@ -424,16 +424,16 @@ select count(*) as ct from (
                 result << msg
 
                 sql.eachRow("""
-  select n.instance_id, count(*) as ct
-  from
+  SELECT n.instance_id, count(*) AS ct
+  FROM
     tree_arrangement a
-    join tree_node n on a.id = n.tree_arrangement_id
-  where
+    JOIN tree_node n ON a.id = n.tree_arrangement_id
+  WHERE
     a.id = ?
-    and n.instance_id is not null
-    and n.next_node_id is null
-  group by n.instance_id
-  having count(*) > 1
+    AND n.instance_id IS NOT NULL
+    AND n.next_node_id IS NULL
+  GROUP BY n.instance_id
+  HAVING count(*) > 1
   LIMIT 5
             """, [classification.id]) {
                     Instance i = Instance.get(it.instance_id)
@@ -461,21 +461,21 @@ select count(*) as ct from (
         Sql sql = Sql.newInstance(dataSource_nsl);
         try {
             def ct = sql.firstRow("""
-select count(*) as ct
-from (
-select n.id as node_id
-  from
+SELECT count(*) AS ct
+FROM (
+SELECT n.id AS node_id
+  FROM
     tree_arrangement a
-    join tree_node n on a.id = n.tree_arrangement_id
-    join tree_link l on n.id = l.subnode_id
-    join tree_node nsup on nsup.id =  l.supernode_id and a.id = nsup.tree_arrangement_id
-  where
+    JOIN tree_node n ON a.id = n.tree_arrangement_id
+    JOIN tree_link l ON n.id = l.subnode_id
+    JOIN tree_node nsup ON nsup.id =  l.supernode_id AND a.id = nsup.tree_arrangement_id
+  WHERE
     a.id = ?
-    and n.next_node_id is null
-    and nsup.next_node_id is null
-    and n.internal_type ='T'
-  group by a.label, n.id
-  having count(nsup.id) > 1
+    AND n.next_node_id IS NULL
+    AND nsup.next_node_id IS NULL
+    AND n.internal_type ='T'
+  GROUP BY a.label, n.id
+  HAVING count(nsup.id) > 1
 )
 subq
         """, [classification.id]).ct
@@ -485,23 +485,23 @@ subq
                 result << msg
 
                 sql.eachRow("""
-select n.id as node_id, count(nsup.id) as ct
-  from
+SELECT n.id AS node_id, count(nsup.id) AS ct
+  FROM
     tree_arrangement a
-    join tree_node n on a.id = n.tree_arrangement_id
-    join tree_link l on n.id = l.subnode_id
-    join tree_node nsup on nsup.id =  l.supernode_id and a.id = nsup.tree_arrangement_id
-  where
+    JOIN tree_node n ON a.id = n.tree_arrangement_id
+    JOIN tree_link l ON n.id = l.subnode_id
+    JOIN tree_node nsup ON nsup.id =  l.supernode_id AND a.id = nsup.tree_arrangement_id
+  WHERE
     a.id = ?
-    and n.next_node_id is null
-    and nsup.next_node_id is null
-    and n.internal_type ='T'
-  group by a.label, n.id
-  having count(nsup.id) > 1
+    AND n.next_node_id IS NULL
+    AND nsup.next_node_id IS NULL
+    AND n.internal_type ='T'
+  GROUP BY a.label, n.id
+  HAVING count(nsup.id) > 1
   LIMIT 20
             """, [classification.id]) {
-                     Node n = Node.get(it.node_id)
-                    def msg1 =  [
+                    Node n = Node.get(it.node_id)
+                    def msg1 = [
                             msg   : "Node ${it.node_id} ${n.name?.fullName} has ${it.ct} current supernodes",
                             level : 'danger',
                             type  : ValidationResult.NODE_HAS_MULTIPLE_SUPERNODES,
@@ -511,10 +511,10 @@ select n.id as node_id, count(nsup.id) as ct
 
                     msg.nested << msg1
 
-                    n.supLink.collect{ it.supernode }.findAll{it.next == null}.each{
+                    n.supLink.collect { it.supernode }.findAll { it.next == null }.each {
                         msg1.nested << [
-                                msg   : "Node ${it.id} ${it.name?.fullName}",
-                                level : 'info'
+                                msg  : "Node ${it.id} ${it.name?.fullName}",
+                                level: 'info'
                         ]
                     }
 
@@ -561,7 +561,7 @@ select n.id as node_id, count(nsup.id) as ct
             Link currentLink = DomainUtils.getSingleCurrentSuperlinkInTree(Node.get(it));
             Link parentLink = queryService.findNodeCurrentOrCheckedout(Node.get(tempSpace.node.id), Node.get(currentLink.supernode.id));
             Node parentNode = parentLink.subnode;
-            if(parentNode.root.id != tempSpace.id) {
+            if (parentNode.root.id != tempSpace.id) {
                 parentNode = basicOperationsService.checkoutNode(Node.get(tempSpace.node.id), Node.get(parentNode.id));
             }
 
@@ -600,6 +600,54 @@ select n.id as node_id, count(nsup.id) as ct
         log.debug "done"
     }
 
+    def fixClassificationEndDates(Arrangement classification, boolean dry_run = true) {
+        def result = [:]
+        result.nodes = []
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+
+        String subq = """
+WITH RECURSIVE
+nnodes AS (
+  SELECT node_id AS id FROM tree_arrangement a WHERE a.id = ?
+UNION ALL
+  SELECT l.subnode_id AS id FROM nnodes
+    JOIN tree_link l ON nnodes.id = l.supernode_id
+    JOIN tree_node n ON l.subnode_id = n.id
+  WHERE n.internal_type <> 'V'
+),
+nodes AS ( SELECT DISTINCT id FROM nnodes)
+SELECT id FROM tree_node n
+WHERE n.internal_type <> 'V'
+AND n.tree_arrangement_id = ?
+AND n.replaced_at_id IS NULL
+AND n.id NOT IN (SELECT id FROM nodes)
+            """
+
+        try {
+            if (dry_run) {
+                sql.eachRow(subq, [classification.id, classification.id]) {
+                    result.nodes << Node.get(it.id)
+                }
+            }
+            else {
+                Event e = basicOperationsService.newEvent(classification.namespace, "fixClassificationEndDates(${classification.id})")
+                sql.execute("""
+  update tree_node set replaced_at_id = ?, next_node_id = 0
+  where id in (
+    ${subq}
+  )
+""", [e.id, classification.id, classification.id]
+                )
+            }
+        }
+        finally {
+            sql.close();
+        }
+
+        return result
+    }
+
 
     void dump(Node n, int d = 0, Arrangement tree = null) {
         n = Node.get(n.id);
@@ -609,7 +657,7 @@ select n.id as node_id, count(nsup.id) as ct
 
         if (n.root == tree) {
             n.subLink.each { Link l ->
-                if(l.subnode.internalType != NodeInternalType.V)
+                if (l.subnode.internalType != NodeInternalType.V)
                     dump(l.subnode, d + 1, tree);
             }
         }
