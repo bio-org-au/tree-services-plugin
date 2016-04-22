@@ -65,28 +65,16 @@ class CreateDeleteWorkspaceSpec extends Specification {
 
         // workspace node should be a workspace-node
 
-        t.node.typeUriIdPart == 'workspace-node'
+        t.node.typeUriIdPart == 'workspace-root'
 
         // it should have one subnode
 
         t.node.subLink.size() == 1
 
         when:
-        Link wsRootLink = t.node.subLink.first()
-        Node wsRoot = wsRootLink.subnode
-        Node wsWorkingRoot = t.workingRoot
+        Node wsWorkingRoot = t.node
 
         then:
-
-        wsRootLink.versioningMethod == VersioningMethod.T
-        wsRootLink.typeUriIdPart == 'workspace-root-link'
-
-        // which should be a workspace root
-        wsRoot.internalType == NodeInternalType.S
-        wsRoot.typeUriIdPart == 'workspace-root'
-
-        // and it should not be a draft node
-        wsRoot.checkedInAt
 
         //it should have a working root
 

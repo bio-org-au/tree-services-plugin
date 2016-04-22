@@ -266,8 +266,7 @@ class BasicOperationsService {
     }
 
     /**
-     * A user workspace is structured the same as a classification.
-     * It has an owner, and the top-level nodes have different URI types.
+     * A user workspace has no trackihng node. When it is created, the top node is in DRAFT state.
      * @param label
      * @param description
      * @return
@@ -287,64 +286,120 @@ class BasicOperationsService {
                         description: description)
                 workspace.save();
 
-                Node workspaceNode = new Node(
-                        root: workspace,
-                        internalType: NodeInternalType.S,
-                        typeUriNsPart: UriNs.get(1),
-                        typeUriIdPart: 'workspace-node',
-                        synthetic: false,
-                        checkedInAt: event
-                )
-                workspaceNode.save();
-
                 Node workspaceRoot = new Node(
                         root: workspace,
                         internalType: NodeInternalType.S,
                         typeUriNsPart: UriNs.get(1),
                         typeUriIdPart: 'workspace-root',
                         synthetic: false,
-                        checkedInAt: event
                 )
 
                 workspaceRoot.save()
-
-                Node workspaceWorkingRoot = new Node(
-                        root: workspace,
-                        internalType: NodeInternalType.S,
-                        typeUriNsPart: UriNs.get(1),
-                        typeUriIdPart: 'workspace-root',
-                        synthetic: false,
-                        prev: workspaceRoot
-                        // the working root is not checked in - it is created in draft mode.
-                )
-                workspaceWorkingRoot.save();
 
                 // I have to do this here and not earlier because GORM is too fsking clever
                 // it thinks that because Arrangement only has one attribute of type
                 // Node, that when you save a node with its arrangment set, the arrangemnt
                 // node also has to be set. Grr.
 
-                workspace.node = workspaceNode
-                workspace.workingRoot = workspaceWorkingRoot
+                workspace.node = workspaceRoot
                 workspace.save();
-
-                Link workspaceRootLink = new Link(
-                        supernode: workspaceNode,
-                        subnode: workspaceRoot,
-                        typeUriNsPart: UriNs.get(1),
-                        typeUriIdPart: 'workspace-root-link',
-                        versioningMethod: VersioningMethod.T,
-                        linkSeq: 1,
-                        synthetic: false
-                )
-
-                workspaceRootLink.save()
-                workspaceNode.addToSubLink(workspaceRootLink)
-                workspaceNode.save()
 
                 return workspace
             } as Arrangement
         } as Arrangement
+    }
+
+
+    void checkoutWorkspace(Arrangement workspace) {
+        mustHave(workspace: workspace) {
+            clearAndFlush {
+                arrangement = DomainUtils.refetchArrangement(arrangement)
+
+                if(arrangement.arrangementType != ArrangementType.U) {
+                    throw new IllegalArgumentException("Arrangement is not a workspace");
+                }
+
+                if(!DomainUtils.isCheckedIn(workspace.node)) {
+                    throw new IllegalArgumentException("Arrangement is already checked out");
+                }
+
+                doWork(sessionFactory_nsl) { Connection cnct ->
+                    Long newId = queryService.getNextval()
+
+                    withQ cnct, '''insert into tree_node(
+                             ID,
+                             lock_version,
+                             PREV_NODE_ID,
+                             TREE_ARRANGEMENT_ID,
+                             INTERNAL_TYPE,
+                             TYPE_URI_NS_PART_ID,
+                             TYPE_URI_ID_PART,
+                             IS_SYNTHETIC
+                            )
+                            select
+                             ?, 	            -- ID
+                             1,	 				--lock_version
+                             ?, 				--PREV_NODE_ID
+                             ?, 				--TREE_ARRANGEMENT_ID
+                             'S',               --INTERNAL_TYPE
+                             1,                 --TYPE_URI_NS_PART_ID
+                             'workspace-root',  --TYPE_URI_ID_PART
+                             'N' 				-- IS_SYNTHETIC
+                            ''',
+                        { PreparedStatement qry ->
+                            qry.setLong(1, newId)                   // ID
+                            qry.setLong(2, workspace.root.id)       // PREV_NODE_ID
+                            qry.setLong(3, workspace.id)         // TREE_ARRANGEMENT_ID
+                            qry.executeUpdate()
+                        }
+
+                    // copy all links
+
+                    withQ cnct, '''insert into tree_link (
+                             ID,
+                             lock_version,
+                             SUPERNODE_ID,
+                             SUBNODE_ID,
+                             TYPE_URI_NS_PART_ID,
+                             TYPE_URI_ID_PART,
+                             LINK_SEQ,
+                             VERSIONING_METHOD,
+                             IS_SYNTHETIC
+                            )
+                            select
+                             nextval('nsl_global_seq'), 	--ID
+                             1, 							--VERSION
+                             ?, 				--SUPERNODE_ID
+                             l.SUBNODE_ID,
+                             l.TYPE_URI_NS_PART_ID,
+                             l.TYPE_URI_ID_PART,
+                             l.LINK_SEQ,
+                             l.VERSIONING_METHOD,
+                             'Y' 							--IS_SYNTHETIC
+                            from
+                            tree_link l
+                            where
+                            l.supernode_id = ?
+                            ''',
+                        { PreparedStatement qry ->
+                            qry.setLong(1, newId)
+                            qry.setLong(2, workspace.root.id)
+                            qry.executeUpdate()
+                        }
+
+                    // and update the link to point at the new node
+
+                    withQ cnct, '''
+				update tree_link set subnode_id = ? where id = ?
+			''', { PreparedStatement qry ->
+                        qry.setLong(1, newId)
+                        qry.setLong(2, link.id)
+                        qry.executeUpdate()
+                    }
+
+                }
+            }
+        }
     }
 
     void updateArrangement(Arrangement arrangement, String title, String description) {
@@ -989,7 +1044,6 @@ class BasicOperationsService {
                 }
 
                 arrangement.node = null
-                arrangement.workingRoot = null
                 arrangement.save(flush: true) // must do this before we can delete the arangement node
                 Link.executeUpdate('delete from Link where supernode in (select n from Node n where n.root = :arrangement)', [arrangement: arrangement])
                 Node.executeUpdate('delete from Node where root = :arrangement', [arrangement: arrangement])
@@ -1104,7 +1158,11 @@ class BasicOperationsService {
                 * it when I'm done, if necessary
                 */
 
-                boolean need_to_uncheck_root_node = (n.root.node == n) && (!DomainUtils.isCheckedIn(n))
+                /*
+                  Very unhappy with this design. A total wart. Adding hack for User workspaces.
+                 */
+
+                boolean need_to_uncheck_root_node = (n.root.node == n) && (n.root.arrangementType != ArrangementType.U) && (!DomainUtils.isCheckedIn(n))
 
                 doWork(sessionFactory_nsl) { Connection cnct ->
 

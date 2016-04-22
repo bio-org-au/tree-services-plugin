@@ -33,8 +33,10 @@ class UserWorkspaceManagerService {
         Event e = basicOperationsService.newEvent namespace, "Create workspace", owner
         Arrangement ws = basicOperationsService.createWorkspace(e, owner, title, description)
 
+        checkout = DomainUtils.refetchNode(checkout)
+
         if(checkout) {
-            basicOperationsService.adoptNode(ws.workingRoot, checkout, VersioningMethod.V, linkType: DomainUtils.getBoatreeUri('workspace-top-node'));
+            basicOperationsService.adoptNode(ws.node, checkout, VersioningMethod.V, linkType: DomainUtils.getBoatreeUri('workspace-top-node'));
         }
 
         return ws;
@@ -53,19 +55,23 @@ class UserWorkspaceManagerService {
         basicOperationsService.updateArrangement(arrangement, title, description);
     }
 
-    Node addNamesToNode(Node root, Node focus, List<?> names) {
+    Node addNamesToNode(Arrangement ws, Node focus, List<?> names) {
         log.debug('addNamesToNode');
-        if(!root) throw new IllegalArgumentException("root may not be null");
+        if(!ws) throw new IllegalArgumentException("root may not be null");
         if(!focus) throw new IllegalArgumentException("focus may not be null");
 
-        if(root.checkedInAt) throw new IllegalArgumentException("root must be a draft node");
+        if(ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("root must belong to a workspace");
 
-        if(root.root.arrangementType != ArrangementType.U) throw new IllegalArgumentException("root must belong to a workspace");
+        if(ws.node.checkedInAt) {
+            basicOperationsService.checkoutWorkspace(ws);
+            ws = DomainUtils.refetchArrangement(ws);
+            focus = DomainUtils.refetchNode(focus);
+        }
 
         if(focus.checkedInAt) {
-            log.debug("about to checkout ${focus} in ${root}");
-            focus = basicOperationsService.checkoutNode(root, focus);
-            log.debug("checkout ok. New node is ${focus} in ${root}");
+            log.debug("about to checkout ${focus} in ${ws}");
+            focus = basicOperationsService.checkoutNode(ws.node, focus);
+            log.debug("checkout ok. New node is ${focus}");
         }
         else {
             log.debug("${focus} is already checked out");
@@ -73,7 +79,7 @@ class UserWorkspaceManagerService {
 
         names.each {
             log.debug('refetch root');
-            root = DomainUtils.refetchNode(root);
+            ws = DomainUtils.refetchArrangement(ws);
             log.debug('refetch focus');
             focus = DomainUtils.refetchNode(focus);
 
