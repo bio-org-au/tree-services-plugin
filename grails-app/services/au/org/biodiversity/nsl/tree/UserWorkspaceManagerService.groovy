@@ -63,9 +63,7 @@ class UserWorkspaceManagerService {
         if(ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("root must belong to a workspace");
 
         if(ws.node.checkedInAt) {
-            basicOperationsService.checkoutWorkspace(ws);
-            ws = DomainUtils.refetchArrangement(ws);
-            focus = DomainUtils.refetchNode(focus);
+            throw new IllegalStateException("Workspace root nodes are never checked in");
         }
 
         if(focus.checkedInAt) {
