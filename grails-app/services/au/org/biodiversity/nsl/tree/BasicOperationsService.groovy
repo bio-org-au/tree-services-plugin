@@ -161,9 +161,9 @@ class BasicOperationsService {
     }
 
     Event newEventTs(Namespace namespace, Timestamp ts, String authUser, String note) {
-        if(!namespace) throw new IllegalArgumentException("null namespace");
-        if(!ts) throw new IllegalArgumentException("null timestamp");
-        if(!authUser) {
+        if (!namespace) throw new IllegalArgumentException("null namespace");
+        if (!ts) throw new IllegalArgumentException("null timestamp");
+        if (!authUser) {
             authUser = getPrincipal()
         }
 
@@ -175,7 +175,7 @@ class BasicOperationsService {
     }
 
     Arrangement createTemporaryArrangement(Namespace namespace) {
-        if(!namespace) throw new IllegalArgumentException("null namespace");
+        if (!namespace) throw new IllegalArgumentException("null namespace");
         clearAndFlush {
             // temporary arangments do not belong to any shard
             Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y', namespace: namespace, owner: 'INTERNAL')
@@ -314,23 +314,23 @@ class BasicOperationsService {
             clearAndFlush {
                 arrangement = DomainUtils.refetchArrangement(arrangement)
 
-                switch(arrangement.arrangementType) {
+                switch (arrangement.arrangementType) {
                     case ArrangementType.E:
                         throw new IllegalArgumentException("The end tree cannot be modified");
                         break;
 
                     case ArrangementType.P:
-                    break;
+                        break;
 
                     case ArrangementType.U:
-                        if(!title) {
+                        if (!title) {
                             throw new IllegalArgumentException("Workspaces must have a title");
                         }
-                    break;
+                        break;
 
                     case ArrangementType.Z:
                         throw new IllegalArgumentException("Temp trees cannot be modified");
-                    break;
+                        break;
                 }
 
                 arrangement.title = title;
@@ -439,7 +439,7 @@ class BasicOperationsService {
                 ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAME_URI_DOESNT_MATCH, [name, nslName])])
 
             }
-            if(supernode.root.namespace != nslName.namespace) {
+            if (supernode.root.namespace != nslName.namespace) {
                 ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [supernode.root.namespace, nslName.namespace])])
             }
         }
@@ -448,7 +448,7 @@ class BasicOperationsService {
             if (!taxon || taxon.nsPart != nslInstanceNs() || taxon.idPart != (nslInstance.id as String)) {
                 ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.INSTANCE_URI_DOESNT_MATCH, [taxon, nslInstance])]);
             }
-            if(supernode.root.namespace != nslInstance.namespace) {
+            if (supernode.root.namespace != nslInstance.namespace) {
                 ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [supernode.root.namespace, nslInstance.namespace])])
             }
         }
@@ -554,14 +554,14 @@ class BasicOperationsService {
                 Uri taxon = params['taxon'] as Uri
                 Instance nslInstance = params['nslInstance'] as Instance
 
-                if(nslName && n.root.namespace != nslName.namespace) {
+                if (nslName && n.root.namespace != nslName.namespace) {
                     ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [
                             n,
                             ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [n.root.namespace, nslName.namespace])
                     ])
                 }
 
-                if(nslInstance && n.root.namespace != nslInstance.namespace) {
+                if (nslInstance && n.root.namespace != nslInstance.namespace) {
                     ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [
                             n,
                             ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [n.root.namespace, nslInstance.namespace])
@@ -805,6 +805,34 @@ class BasicOperationsService {
                     }
                 }
             }
+        }
+    }
+
+    public void simpleMoveDraftLink(Link l, Node newSupernode) {
+        mustHave(link: l, newSupernode: newSupernode) {
+            if (l.supernode == newSupernode) return;
+
+
+            if (DomainUtils.isCheckedIn(l.supernode)) throw new IllegalArgumentException("existing link is checked in");
+            if (DomainUtils.isCheckedIn(newSupernode)) throw new IllegalArgumentException("target is checked in");
+            if (l.supernode.root != newSupernode.root) throw new IllegalArgumentException("target is from a different tree");
+
+            for (Node sup = newSupernode; sup; sup = DomainUtils.getSingleSupernode(sup)) {
+                if (sup == l.subnode) {
+                    throw new IllegalArgumentException("new supernode is a subnode of the link");
+                }
+            }
+
+            int linkSeq = 0;
+            for (Link ll : newSupernode.subLink) {
+                linkSeq = Math.max(linkSeq, ll.linkSeq);
+            }
+
+
+            l.supernode = newSupernode;
+            l.linkSeq = linkSeq + 1;
+
+            l.save();
         }
     }
 

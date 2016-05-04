@@ -623,7 +623,7 @@ select distinct start_id from ll where supernode_id = ?
                         ResultSet rs = qry.executeQuery()
 
                         try {
-                            while(rs.next()) {
+                            while (rs.next()) {
 
                                 l.add(Node.get(rs.getLong(1)));
                             }
@@ -639,38 +639,41 @@ select distinct start_id from ll where supernode_id = ?
     }
 
     List<Link> findPathLinks(Node root, Node focus) {
-            List<Link> l = new ArrayList<Node>();
+        if (!root) throw new IllegalArgumentException("root is null");
+        if (!focus) throw new IllegalArgumentException("focus is null");
+
+        List<Link> l = new ArrayList<Node>();
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
                 with recursive scan_up as (
-                  select l.id, l.supernode_id, l.subnode_id from tree_link l where l.subnode_id = 2911500
+                  select l.id, l.supernode_id, l.subnode_id from tree_link l where l.subnode_id = ?
                 union all
-                  select l.id, l.supernode_id, l.subnode_id from tree_link l, scan_up where l.subnode_id = scan_up.supernode_id and scan_up.supernode_id <> 4952426
+                  select l.id, l.supernode_id, l.subnode_id from tree_link l, scan_up where l.subnode_id = scan_up.supernode_id and scan_up.supernode_id <> ?
                 ),
                 scan_down as (
-                  select scan_up.* from scan_up where scan_up.supernode_id = 4952426
+                  select 1 as depth, scan_up.* from scan_up where scan_up.supernode_id = ?
                 union all
-                  select scan_up.* from scan_up, scan_down where scan_up.supernode_id = scan_down.subnode_id and scan_down.supernode_id <> 2911500
+                  select depth+1 as depth, scan_up.* from scan_up, scan_down where scan_up.supernode_id = scan_down.subnode_id and scan_down.supernode_id <> ?
                 )
-                select * from scan_down
+                select * from scan_down order by depth
         ''',
-            { PreparedStatement qry ->
-                qry.setLong(1, focus.id)
-                qry.setLong(2, root.id)
-                qry.setLong(3, root.id)
-                qry.setLong(4, focus.id)
-                ResultSet rs = qry.executeQuery()
+                    { PreparedStatement qry ->
+                        qry.setLong(1, focus.id)
+                        qry.setLong(2, root.id)
+                        qry.setLong(3, root.id)
+                        qry.setLong(4, focus.id)
+                        ResultSet rs = qry.executeQuery()
 
-                try {
-                    while(rs.next()) {
-                        l.add(Link.get(rs.getLong(1)));
+                        try {
+                            while (rs.next()) {
+                                l.add(Link.get(rs.getLong('id')));
+                            }
+                        }
+                        finally {
+                            rs.close()
+                        }
                     }
-                }
-                finally {
-                    rs.close()
-                }
-            }
         }
 
         return l;

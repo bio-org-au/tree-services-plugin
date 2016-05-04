@@ -55,6 +55,86 @@ class UserWorkspaceManagerService {
         basicOperationsService.updateArrangement(arrangement, title, description);
     }
 
+    Node moveWorkspaceNode(Arrangement ws, Node target, Node node) {
+        if(target == node) throw new IllegalArgumentException("node == target");
+
+        if(node == ws.node) throw new IllegalArgumentException("node == ws.node");
+
+        List<Node> reversePath = queryService.findPath(node, target)
+
+        if(reversePath && !reversePath.isEmpty()) throw new IllegalArgumentException("node is supernode of target");
+
+        if(DomainUtils.isCheckedIn(target)) {
+            List<Node> pathToTarget = queryService.findPath(ws.node, target)
+            if(pathToTarget.isEmpty()) throw new IllegalArgumentException("target not in workspace");
+
+            target = basicOperationsService.checkoutNode(ws.node, target);
+
+            ws = DomainUtils.refetchArrangement(ws);
+            target = DomainUtils.refetchNode(target);
+            node = DomainUtils.refetchNode(node);
+        }
+
+
+        List<Link> pathToNode =  queryService.findPathLinks(ws.node, node);
+
+        if(pathToNode.isEmpty()) throw new IllegalArgumentException("node not in workspace");
+
+        Link parentLink = pathToNode.last();
+        Node currentParent = parentLink.supernode;
+
+        if(DomainUtils.isCheckedIn(currentParent)) {
+            ws = DomainUtils.refetchArrangement(ws);
+            target = DomainUtils.refetchNode(target);
+            node = DomainUtils.refetchNode(node);
+            currentParent = DomainUtils.refetchNode(currentParent);
+            parentLink = DomainUtils.refetchLink(parentLink);
+
+            currentParent = basicOperationsService.checkoutNode(ws.node, currentParent);
+            currentParent = DomainUtils.refetchNode(currentParent);
+            parentLink = DomainUtils.refetchLink(parentLink);
+
+            parentLink = Link.findBySupernodeAndLinkSeq(currentParent, parentLink.linkSeq);
+
+        }
+
+        basicOperationsService.simpleMoveDraftLink(parentLink, target);
+    }
+
+    Node adoptNode(Arrangement ws, Node target, Node node) {
+        if(target == node) throw new IllegalArgumentException("node == target");
+
+        if(node == ws.node) throw new IllegalArgumentException("node == ws.node");
+
+        if(!DomainUtils.isCheckedIn(node)) throw new IllegalArgumentException("cannot adopt draft node");
+        if(DomainUtils.isReplaced(node)) throw new IllegalArgumentException("cannot adopt outdated node");
+
+        List<Node> reversePath = queryService.findPath(node, target)
+
+        if(reversePath && !reversePath.isEmpty()) throw new IllegalArgumentException("node is supernode of target");
+
+        if(DomainUtils.isCheckedIn(target)) {
+            List<Node> pathToTarget = queryService.findPath(ws.node, target)
+            if(pathToTarget.isEmpty()) throw new IllegalArgumentException("target not in workspace");
+
+            target = basicOperationsService.checkoutNode(ws.node, target);
+
+            ws = DomainUtils.refetchArrangement(ws);
+            target = DomainUtils.refetchNode(target);
+            node = DomainUtils.refetchNode(node);
+        }
+
+        List<Link> pathToNode =  queryService.findPathLinks(ws.node, node);
+
+        if(!pathToNode.isEmpty()) throw new IllegalArgumentException("node already in workspace");
+
+        basicOperationsService.adoptNode(target, node, VersioningMethod.V);
+
+        return target
+    }
+
+
+
     Node addNamesToNode(Arrangement ws, Node focus, List<?> names) {
         log.debug('addNamesToNode');
         if(!ws) throw new IllegalArgumentException("root may not be null");
