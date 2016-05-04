@@ -810,15 +810,18 @@ class BasicOperationsService {
 
     public void simpleMoveDraftLink(Link l, Node newSupernode) {
         mustHave(link: l, newSupernode: newSupernode) {
-            if (l.supernode == newSupernode) return;
+            l = DomainUtils.refetchLink(l)
+            newSupernode = DomainUtils.refetchNode(newSupernode)
+
+            if (l.supernode.id == newSupernode.id) return;
 
 
             if (DomainUtils.isCheckedIn(l.supernode)) throw new IllegalArgumentException("existing link is checked in");
             if (DomainUtils.isCheckedIn(newSupernode)) throw new IllegalArgumentException("target is checked in");
-            if (l.supernode.root != newSupernode.root) throw new IllegalArgumentException("target is from a different tree");
+            if (l.supernode.root.id != newSupernode.root.id) throw new IllegalArgumentException("target is from a different tree");
 
             for (Node sup = newSupernode; sup; sup = DomainUtils.getSingleSupernode(sup)) {
-                if (sup == l.subnode) {
+                if (sup.id == l.subnode.id) {
                     throw new IllegalArgumentException("new supernode is a subnode of the link");
                 }
             }
