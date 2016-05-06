@@ -55,7 +55,7 @@ class UserWorkspaceManagerService {
         basicOperationsService.updateArrangement(arrangement, title, description);
     }
 
-    Node moveWorkspaceNode(Arrangement ws, Node target, Node node) {
+    def moveWorkspaceNode(Arrangement ws, Node target, Node node) {
         if(target == node) throw new IllegalArgumentException("node == target");
 
         if(node == ws.node) throw new IllegalArgumentException("node == ws.node");
@@ -99,9 +99,15 @@ class UserWorkspaceManagerService {
         }
 
         basicOperationsService.simpleMoveDraftLink(parentLink, target);
+
+        return [
+            target: target,
+            modified: [target, currentParent]
+        ]
+
     }
 
-    Node adoptNode(Arrangement ws, Node target, Node node) {
+    def adoptNode(Arrangement ws, Node target, Node node) {
         if(target == node) throw new IllegalArgumentException("node == target");
 
         if(node == ws.node) throw new IllegalArgumentException("node == ws.node");
@@ -130,12 +136,15 @@ class UserWorkspaceManagerService {
 
         basicOperationsService.adoptNode(target, node, VersioningMethod.V);
 
-        return target
+        return [
+            target: target,
+            modified: [target]
+        ]
     }
 
 
 
-    Node addNamesToNode(Arrangement ws, Node focus, List<?> names) {
+    def addNamesToNode(Arrangement ws, Node focus, List<?> names) {
         log.debug('addNamesToNode');
         if(!ws) throw new IllegalArgumentException("root may not be null");
         if(!focus) throw new IllegalArgumentException("focus may not be null");
@@ -193,6 +202,9 @@ class UserWorkspaceManagerService {
         }
         log.debug('added all elements ok');
 
-        return focus;
+        return {
+            target: focus
+            modified: []
+        }
     }
 }
