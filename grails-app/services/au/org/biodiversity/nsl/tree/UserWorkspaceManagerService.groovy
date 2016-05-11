@@ -207,4 +207,42 @@ class UserWorkspaceManagerService {
             modified: []
         }
     }
+
+    def replaceDraftNodeWith(Node target, Node replacement) {
+        log.debug('replaceDraftNodeWith');
+        if(!target) throw new IllegalArgumentException("target may not be null");
+        if(!replacement) throw new IllegalArgumentException("replacement may not be null");
+
+        if(DomainUtils.isCheckedIn(target))throw new IllegalArgumentException("target must be a draft node");
+        if(target.root.node == target) throw new IllegalArgumentException("target must not be the root of a workspace");
+        if(target.root.arrangementType != ArrangementType.U) throw new IllegalArgumentException("target belong to a workspace");
+
+        if(!DomainUtils.isCurrent(replacement))throw new IllegalArgumentException("replacement must be current");
+        if(DomainUtils.isEndNode(replacement))throw new IllegalArgumentException("replacement must not be the end node");
+
+        Link existingLink = DomainUtils.getDraftNodeSuperlink(target);
+
+        Node supernode = existingLink.supernode;
+        VersioningMethod vm = existingLink.getVersioningMethod();
+        int seq = existingLink.getLinkSeq();
+        Uri type = DomainUtils.getLinkTypeUri(existingLink);
+
+        if(existingLink == null) {
+            throw new IllegalStateException("draft node ${target} has no superlink!")
+        }
+
+        basicOperationsService.deleteDraftTree(target);
+
+        supernode = DomainUtils.refetchNode(supernode);
+        replacement = DomainUtils.refetchNode(replacement);
+        type = DomainUtils.refetchUri(type);
+
+        return basicOperationsService.adoptNode(
+                supernode,
+                replacement,
+                vm,
+                seq: seq,
+                linkType: type
+        );
+    }
 }
