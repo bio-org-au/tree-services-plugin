@@ -215,7 +215,7 @@ class UserWorkspaceManagerService {
 
         if(DomainUtils.isCheckedIn(target))throw new IllegalArgumentException("target must be a draft node");
         if(target.root.node == target) throw new IllegalArgumentException("target must not be the root of a workspace");
-        if(target.root.arrangementType != ArrangementType.U) throw new IllegalArgumentException("target belong to a workspace");
+        if(target.root.arrangementType != ArrangementType.U) throw new IllegalArgumentException("target must belong to a workspace");
 
         if(!DomainUtils.isCurrent(replacement))throw new IllegalArgumentException("replacement must be current");
         if(DomainUtils.isEndNode(replacement))throw new IllegalArgumentException("replacement must not be the end node");
@@ -244,5 +244,39 @@ class UserWorkspaceManagerService {
                 seq: seq,
                 linkType: type
         );
+    }
+
+    def removeLink(Arrangement ws, Link link) {
+        if(!ws) throw new IllegalArgumentException("null ws");
+        if(!link) throw new IllegalArgumentException("null link");
+        if(ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
+        if(ws.node.checkedInAt) {
+            throw new IllegalStateException("Workspace root nodes are never checked in");
+        }
+
+        int ct = queryService.countPaths(ws.node, link.supernode);
+        if(ct != 1) throw new IllegalArgumentException("supernode must appear only once in the workspace");
+
+        Node focus = link.supernode;
+        if(DomainUtils.isCheckedIn(focus)) {
+            log.debug("about to checkout ${focus} in ${ws}");
+            focus = basicOperationsService.checkoutNode(ws.node, focus);
+            log.debug("checkout ok. New node is ${focus}");
+
+            link = DomainUtils.refetchLink(link);
+        }
+        else {
+            log.debug("${focus} is already checked out");
+        }
+
+        if(DomainUtils.isCheckedIn(link.subnode)) {
+            basicOperationsService.deleteLink(focus, link.linkSeq);
+        }
+        else {
+            basicOperationsService.deleteDraftTree(link.subnode);
+        }
+
+        focus = DomainUtils.refetchNode(focus);
+        return focus;
     }
 }
