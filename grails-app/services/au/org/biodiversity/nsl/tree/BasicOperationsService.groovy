@@ -1428,6 +1428,14 @@ class BasicOperationsService {
                     ])
                 }
 
+                if(queryService.countPaths(supernode, targetnode) != 1) {
+                    ServiceException.raise ServiceException.makeMsg(Msg.checkoutNode, [
+                            supernode,
+                            targetnode,
+                            ServiceException.makeMsg(Msg.CHECKOUT_MUST_APPEAR_ONCE)
+                    ])
+                }
+
                 Long newTargetId = null
 
                 doWork(sessionFactory_nsl) { Connection cnct ->

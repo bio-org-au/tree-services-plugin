@@ -598,6 +598,46 @@ select distinct start_id from ll where supernode_id = ?
         } as Link
     }
 
+    int countPaths(Node root, Node focus) {
+        try {
+            if (root == null || focus == null) return 0;
+            if (root == focus) return 1;
+
+            int ct;
+
+            doWork(sessionFactory_nsl) { Connection cnct ->
+                withQ cnct, '''
+        with recursive scan_up as (
+                select supernode_id, subnode_id from tree_link where subnode_id = ?
+                union all
+                select l.supernode_id, l.subnode_id from tree_link l, scan_up where l.subnode_id = scan_up.supernode_id and scan_up.subnode_id <> ?
+        )
+        select count(*) as ct from scan_up where supernode_id = ?
+				''',
+                        { PreparedStatement qry ->
+                            qry.setLong(1, focus.id)
+                            qry.setLong(2, root.id)
+                            qry.setLong(3, root.id)
+                            ResultSet rs = qry.executeQuery()
+                            try {
+                                rs.next()
+                                ct = rs.getInt(1)
+                            }
+                            finally {
+                                rs.close()
+                            }
+
+                        }
+            }
+            return ct;
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+
     List<Node> findPath(Node root, Node focus) {
         List<Node> l = new ArrayList<Node>();
 
