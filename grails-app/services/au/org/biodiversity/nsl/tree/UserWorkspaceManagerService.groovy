@@ -308,6 +308,7 @@ class UserWorkspaceManagerService {
             if (paths > 1) throw new IllegalArgumentException("target in workspace multiple places");
             target = basicOperationsService.checkoutNode(ws.node, target);
             target = DomainUtils.refetchNode(target);
+            name = DomainUtils.refetchName(name);
         }
 
 
@@ -331,6 +332,7 @@ class UserWorkspaceManagerService {
             if (paths > 1) throw new IllegalArgumentException("target in workspace multiple places");
             target = basicOperationsService.checkoutNode(ws.node, target);
             target = DomainUtils.refetchNode(target);
+            name = DomainUtils.refetchName(name);
         }
 
         Node n = basicOperationsService.createDraftNode(target, VersioningMethod.V, NodeInternalType.T,
@@ -359,6 +361,7 @@ class UserWorkspaceManagerService {
             if (paths > 1) throw new IllegalArgumentException("target in workspace multiple places");
             target = basicOperationsService.checkoutNode(ws.node, target);
             target = DomainUtils.refetchNode(target);
+            instance = DomainUtils.refetchInstance(instance);
         }
 
         basicOperationsService.updateDraftNode(target, nslName: instance.name, nslInstance: instance)
@@ -382,6 +385,7 @@ class UserWorkspaceManagerService {
             if (paths > 1) throw new IllegalArgumentException("target in workspace multiple places");
             target = basicOperationsService.checkoutNode(ws.node, target);
             target = DomainUtils.refetchNode(target);
+            instance = DomainUtils.refetchInstance(instance);
         }
 
         Node n = basicOperationsService.createDraftNode(target, VersioningMethod.V, NodeInternalType.T,
