@@ -719,6 +719,44 @@ select distinct start_id from ll where supernode_id = ?
         return l;
     }
 
+    int countDraftNodes(Node focus) {
+        try {
+            if (focus == null) return 0;
+
+            int ct;
+
+            doWork(sessionFactory_nsl) { Connection cnct ->
+                withQ cnct, '''
+        with recursive scan as (
+                select tree_node.id from tree_node where tree_node.id = ? and tree_node.checked_in_at_id is null
+                union all
+                select tree_node.id from scan join tree_link on scan.id = tree_link.supernode_id
+                join tree_node on tree_link.subnode_id = tree_node.id
+                where tree_node.checked_in_at_id is null
+        )
+        select count(*) as ct from scan
+				''',
+                        { PreparedStatement qry ->
+                            qry.setLong(1, focus.id)
+                            ResultSet rs = qry.executeQuery()
+                            try {
+                                rs.next()
+                                ct = rs.getInt(1)
+                            }
+                            finally {
+                                rs.close()
+                            }
+
+                        }
+            }
+            return ct;
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
     // This method returns a branch object. A branch object contains a top node, its placements, and its entire subnode tree.
 
     public static class Tree {
