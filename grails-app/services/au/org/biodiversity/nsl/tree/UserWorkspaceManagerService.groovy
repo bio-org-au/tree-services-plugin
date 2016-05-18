@@ -390,7 +390,9 @@ class UserWorkspaceManagerService {
 
         Node n = basicOperationsService.createDraftNode(target, VersioningMethod.V, NodeInternalType.T,
                 // TODO: NODE TYPE
-                nslName: instance.name, nslINstance: instance, nodeType: DomainUtils.uri('apc-voc', 'ApcConcept')
+                nslName: instance.name,
+                nslInstance: instance,
+                nodeType: DomainUtils.uri('apc-voc', 'ApcConcept')
         );
 
         target = DomainUtils.refetchNode(target);
