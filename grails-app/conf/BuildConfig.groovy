@@ -57,8 +57,6 @@ grails.project.ivy.authentication = {
     }
 }
 
-grails.plugin.location."nslDomainPlugin" = "../nsl-domain-plugin"
-
 grails.project.dependency.resolution = {
     // inherit Grails' default dependencies
     inherits("global") {
@@ -95,10 +93,10 @@ grails.project.dependency.resolution = {
             export = false
         }
 
-//		compile ('au.org.biodiversity.grails.plugins:nsl-domain-plugin:1.1-SNAPSHOT'){
-//			excludes "scaffolding"
-//			excludes "cache"
-//		}
+		compile ('au.org.biodiversity.grails.plugins:nsl-domain-plugin:1.1-SNAPSHOT'){
+			excludes "scaffolding"
+			excludes "cache"
+		}
 		
     }
 }
