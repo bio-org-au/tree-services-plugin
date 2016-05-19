@@ -1096,11 +1096,9 @@ class BasicOperationsService {
                 * it when I'm done, if necessary
                 */
 
-                /*
-                  Very unhappy with this design. A total wart. Adding hack for User workspaces.
-                 */
+                /* Very unhappy with this design. A total wart. */
 
-                boolean need_to_uncheck_root_node = (n.root.node == n) && (n.root.arrangementType != ArrangementType.U) && (!DomainUtils.isCheckedIn(n))
+                boolean need_to_uncheck_root_node = (n.root.node == n) && (!DomainUtils.isCheckedIn(n))
 
                 doWork(sessionFactory_nsl) { Connection cnct ->
 
