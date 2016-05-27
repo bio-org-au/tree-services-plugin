@@ -402,4 +402,31 @@ class UserWorkspaceManagerService {
                 modified: [n]
         ]
     }
+
+    def setNodeType(Arrangement ws, Node target, Uri nodeType) {
+        if (!ws) throw new IllegalArgumentException("null ws");
+        if (!target) throw new IllegalArgumentException("null target");
+        if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
+
+        if(target.internalType != NodeInternalType.T) throw new IllegalArgumentException("not a taxonomic node")
+        if (!nodeType) nodeType = DomainUtils.getDefaultNodeTypeUriFor(target.internalType);
+
+        if (DomainUtils.isCheckedIn(target)) {
+            int paths = queryService.countPaths(ws.node, target);
+            if (paths == 0) throw new IllegalArgumentException("target not in workspace");
+            if (paths > 1) throw new IllegalArgumentException("target in workspace multiple places");
+            target = basicOperationsService.checkoutNode(ws.node, target);
+            target = DomainUtils.refetchNode(target);
+        }
+
+        basicOperationsService.updateDraftNode(target, nodeType: nodeType)
+
+        target = DomainUtils.refetchNode(target);
+
+        return [
+                target  : target,
+                modified: [target]
+        ]
+
+    }
 }
