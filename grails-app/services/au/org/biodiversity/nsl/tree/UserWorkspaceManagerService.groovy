@@ -429,4 +429,30 @@ class UserWorkspaceManagerService {
         ]
 
     }
+
+    def performCheckin(Node node) {
+        if(!node) throw new IllegalArgumentException("null node");
+        if(node.checkedInAt) throw new IllegalArgumentException("node not draft");
+        if(!node.prev) throw new IllegalArgumentException("node not a checkout");
+        if(node.prev.replacedAt) throw new IllegalArgumentException("target checkin is already replaced");
+
+        Event e = basicOperationsService.newEvent(node.namespace(), "checkin of ${node}")
+        node = DomainUtils.refetchNode(node);
+        basicOperationsService.persistNode(e, node);
+        node = DomainUtils.refetchNode(node);
+        Map<Node, Node> v = versioningService.getCheckinVersioningMap(node.root, node.prev.root, node);
+        versioningService.performVersioning(e, v, node.prev.root);
+        node = DomainUtils.refetchNode(node);
+        basicOperationsService.moveNodeSubtreeIntoArrangement(node.root, node.prev.root, node);
+        node = DomainUtils.refetchNode(node);
+
+        // I am not going to attempt to display what has been changed.
+        // The client is just going to have to refresh everything.
+
+        return [
+                target  : node,
+                modified: [node]
+        ]
+
+    }
 }

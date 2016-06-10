@@ -2354,6 +2354,56 @@ select link_id from (
         } as Integer
     }
 
+    /*
+    Move nodes from one tree to another starting from a given parent node.
+     */
+
+    public void moveNodeSubtreeIntoArrangement(Arrangement from, Arrangement to, Node node) {
+        mustHave(from: from, to: to, node: node) {
+            clearAndFlush {
+                from = DomainUtils.refetchArrangement(from)
+                to = DomainUtils.refetchArrangement(to)
+                node = DomainUtils.refetchNode(node)
+
+                if (from.equals(to)) {
+                    throw new IllegalArgumentException("from == to")
+                }
+
+                if (!node.root.equals(from)) {
+                    throw new IllegalArgumentException("node.root != from")
+                }
+
+                return doWork(sessionFactory_nsl) { Connection cnct ->
+                    // a link belngs to its supernode, so increment the supernode
+                    withQ(cnct, '''
+update tree_node
+set tree_arrangement_id = ?
+where tree_node.id in (
+  with recursive n as (
+    select id from tree_node nn where id = ? and tree_arrangement_id = ?
+    union all
+    select nn.id
+    from n
+      join tree_link l on n.id = l.supernode_id
+      join tree_node nn on l.subnode_id = nn.id
+      where nn.tree_arrangement_id = ?
+  )
+  select id from n
+)
+''')
+                            { PreparedStatement qry ->
+                                qry.setLong(1, to.id)
+                                qry.setLong(2, node.id)
+                                qry.setLong(3, from.id)
+                                qry.setLong(4, from.id)
+                                return qry.executeUpdate()
+                            } as Integer
+                }
+            }
+        }
+
+    }
+
 // physical deletion of a node tree. No checks are done.
 
     private void delete_node_tree(long node_id) {

@@ -643,6 +643,31 @@ class VersioningService {
                                 qry.executeUpdate()
                             }
 
+
+                    log.debug "updating all draft nodes marked as being copied from a versioned node"
+
+                    withQ cnct, '''
+				update tree_node
+				set
+				    lock_version = lock_version+1,
+				    prev_node_id = (
+				        select case when r.id2 = 0 then null else r.id2 end from tree_replacements r where r.id = prev_node_id
+						union all
+				        select case when r.id2 = 0 then null else r.id2 end from tree_syn_replacements r where r.id = prev_node_id
+				    )
+				where
+				    prev_node_id in (
+                        select r.id from tree_replacements  r
+                    union all
+                        select r.id from tree_syn_replacements r
+                    )
+				    and tree_node.checked_in_at_id is null
+				''',
+                            { PreparedStatement qry ->
+                                qry.executeUpdate()
+                            }
+
+
                     log.debug "versioning complete."
 
                 }
@@ -852,6 +877,101 @@ class VersioningService {
             }
 
             return v
+        } as Map<Node, Node>
+    }
+
+    Map<Node, Node> getCheckinVersioningMap(Arrangement from, Arrangement to, Node node) {
+        mustHave(from: from, to: to, node: node) {
+            clearAndFlush {
+                from = DomainUtils.refetchArrangement(from)
+                to = DomainUtils.refetchArrangement(to)
+                node = DomainUtils.refetchNode(node)
+
+                if (from.equals(to)) {
+                    throw new IllegalArgumentException("from == to")
+                }
+
+                if (!node.root.equals(from)) {
+                    throw new IllegalArgumentException("node.root != from")
+                }
+
+                if (!node.prev) {
+                    throw new IllegalArgumentException("!node.prev")
+                }
+
+                if (!node.prev.root.equals(to)) {
+                    throw new IllegalArgumentException("node.prev.root != to")
+                }
+
+                Map<Node, Node> v = new HashMap<Node, Node>()
+
+                doWork sessionFactory_nsl, { Connection cnct ->
+                    withQ cnct, '''
+-- OK! This is going to be complicated
+-- first, find all nodes that we are going to be moving
+--   this means anything below the node node that is in the same tree
+-- next, find all nodes that will be replaced
+--  this means anything beneath the prev of the node being checked in
+-- next, disregard any replaced nodes that are visible from the node being
+--  checked in, because they are not going away anyway
+--  this becomdes part of the search query - might not need another step
+-- all the remaining nodes are either being replaced eith a node being checked in
+--   or with the end node
+with recursive
+replacement_nodes as (
+    select nn.id from tree_node nn where nn.id = ? and nn.tree_arrangement_id = ? and nn.internal_type != 'V'
+    union all
+    select nn.id
+      from replacement_nodes
+      join tree_link l on replacement_nodes.id = l.supernode_id
+      join tree_node nn on l.subnode_id = nn.id
+      where nn.tree_arrangement_id = ? and nn.internal_type != 'V'
+),
+visible_branches as (
+  select nn.id
+    from replacement_nodes
+      join tree_link l on replacement_nodes.id = l.supernode_id
+      join tree_node nn on l.subnode_id = nn.id
+      where nn.tree_arrangement_id <> ? and nn.internal_type != 'V'
+ ),
+nodes_being_replaced as (
+  select nn.id from tree_node nnxx join tree_node nn on nnxx.prev_node_id = nn.id
+    where nnxx.id = ? and nn.tree_arrangement_id = ? and nn.internal_type != 'V'
+    and nn.id not in (select id from visible_branches)
+  union all
+  select nn.id
+    from nodes_being_replaced
+      join tree_link l on nodes_being_replaced.id = l.supernode_id
+      join tree_node nn on l.subnode_id = nn.id
+      where nn.tree_arrangement_id = ? and nn.internal_type != 'V'
+      and nn.id not in (select id from visible_branches)
+)
+select id, coalesce((select n.id
+  from tree_node n join replacement_nodes nn on n.id = nn.id
+  where n.prev_node_id = nodes_being_replaced.id
+), 0) as id2
+ from nodes_being_replaced
+    		    	''', { PreparedStatement qry ->
+                        qry.setLong(1, node.id)
+                        qry.setLong(2, from.id)
+                        qry.setLong(3, from.id)
+                        qry.setLong(4, from.id)
+                        qry.setLong(5, node.id)
+                        qry.setLong(6, to.id)
+                        qry.setLong(7, to.id)
+                        ResultSet rs = qry.executeQuery()
+                        try {
+                            while (rs.next()) {
+                                v.put(Node.get(rs.getLong(1)), Node.get(rs.getLong(2)))
+                            }
+                        }
+                        finally {
+                            rs.close()
+                        }
+                    }
+                }
+                return v
+            } as Map<Node, Node>
         } as Map<Node, Node>
     }
 
