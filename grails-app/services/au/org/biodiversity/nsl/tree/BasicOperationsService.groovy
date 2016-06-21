@@ -2354,6 +2354,206 @@ select link_id from (
         } as Integer
     }
 
+    /**
+     * Ok, this is a bit of a wart. It's a big lumpy operation that is specific to one particular process.
+     * It's being put here in basicOperationsService because it's going to involve quite a bit of SQL.
+     *
+     * It's like this:
+     *
+     * When checking in workspace node back into the tree that it came from, the workspace may contain nodes
+     * that belong to other trees. Those nodes should be replaced in the workspace with copies. Those copies will be
+     * moved into the target tree by moveNodeSubtreeIntoArrangement.
+     *
+     * So:
+     * recursively descend into the links.
+     * find all links where the subnode is not in the workspace AND not in the workspace target tree
+     * make copies of all of those subnodes (not that we can stop recursing when we encounter the target tree)
+     * everyone of the links where the supernode is in the draft tree, update it to point at the new node
+     * every one of the new nodes, if it has a link that is a copy of one of the found links
+     *     then update that links subnode to point at the newly created node
+     * These two steps re-link the tree.
+     *
+     * @param e
+     * @param n
+     */
+
+    public void createCopiesOfAllNonTreeNodes(Event e, Node n) {
+        mustHave(e: e, node: n) {
+            // these messages are unhelpful to the user because we should not have gotten this far at all
+            if(DomainUtils.isCheckedIn(n)) {
+                throw new IllegalArgumentException('DomainUtils.isCheckedIn(n)')
+            }
+
+            if(n.root.arrangementType != ArrangementType.U) {
+                throw new IllegalArgumentException('n.root.arrangementType != ArrangementType.U')
+            }
+            if(!n.prev) {
+                throw new IllegalArgumentException('!n.prev')
+            }
+            if(!DomainUtils.isCurrent(n.prev)) {
+                throw new IllegalArgumentException('!DomainUtils.isCurrent(n.prev)')
+            }
+            if(n.prev.root.arrangementType != ArrangementType.P) {
+                throw new IllegalArgumentException('n.prev.root.arrangementType != ArrangementType.P')
+            }
+
+            // ok. let's do this.
+
+            doWork(sessionFactory_nsl) { Connection cnct ->
+                withQ cnct, '''
+                    create temporary table if not exists link_treewalk_replace_subnode (
+                        id bigint primary key,
+                        supernode_id bigint not null,
+                        subnode_id bigint not null,
+                        subnode_tree_arrangement_id bigint not null,
+                        new_subnode_id bigint
+                    )
+                    on commit delete rows''', { PreparedStatement qry -> qry.executeUpdate() }
+
+                withQ cnct, '''delete from link_treewalk_replace_subnode''', { PreparedStatement qry -> qry.executeUpdate() }
+
+                withQ cnct, '''
+                    insert into link_treewalk_replace_subnode(id, supernode_id, subnode_id, subnode_tree_arrangement_id)
+                    select id, supernode_id, subnode_id, tree_arrangement_id from (
+                        with recursive
+                            treewalk as (
+                              select tree_link.id, tree_link.supernode_id, tree_link.subnode_id, tree_node.tree_arrangement_id
+                                  from tree_link join tree_node on tree_link.subnode_id = tree_node.id
+                                  where tree_link.supernode_id = ?
+                                  and tree_node.tree_arrangement_id <> ?
+                               union all
+                              select  tree_link.id, tree_link.supernode_id, tree_link.subnode_id, tree_node.tree_arrangement_id
+                                  from treewalk
+                                  join tree_link on treewalk.subnode_id = tree_link.supernode_id
+                                  join tree_node on tree_link.subnode_id = tree_node .id
+                                  where tree_node.tree_arrangement_id <> ?
+                            )
+                        select id, supernode_id, subnode_id, tree_arrangement_id
+                            from treewalk
+                            where treewalk.tree_arrangement_id <> ?
+                    ) withq
+                ''', { PreparedStatement qry ->
+                    qry.setLong(1, n.id) // start walk
+                    qry.setLong(2, n.prev.root.id) // filter out source nodes on root
+                    qry.setLong(3, n.prev.root.id) // filter out source nodes on walk
+                    qry.setLong(4, n.root.id) // filter out draft tree after walk
+                    qry.executeUpdate()
+                }
+
+                withQ cnct, '''
+                    update link_treewalk_replace_subnode w set new_subnode_id = nextval('nsl_global_seq')
+                ''', { PreparedStatement qry ->
+                    qry.executeUpdate()
+                }
+
+                // copy all draft nodes. This means copying tree_node, and copying tree_link where the supernode is tree_node
+
+                withQ cnct, '''insert into tree_node(
+				 ID,
+				 internal_type,
+				 lock_version,
+				 PREV_NODE_ID,
+				 NEXT_NODE_ID,
+				 TREE_ARRANGEMENT_ID,
+				 TYPE_URI_NS_PART_ID,
+				 TYPE_URI_ID_PART,
+				 NAME_URI_NS_PART_ID,
+				 NAME_URI_ID_PART,
+				 TAXON_URI_NS_PART_ID,
+				 TAXON_URI_ID_PART,
+				 RESOURCE_URI_NS_PART_ID,
+				 RESOURCE_URI_ID_PART,
+				 LITERAL,
+				 NAME_ID,
+                 INSTANCE_ID,
+				 IS_SYNTHETIC
+				)
+				select
+				 w.new_subnode_id, 	-- ID
+				 n.internal_type,
+				 1,	 				--VERSION
+				 n.id, 				--PREV_NODE_ID
+				 null, 				--NEXT_NODE_ID
+				 ?, 				--TREE_ARRANGEMENT_ID
+				 n.TYPE_URI_NS_PART_ID,
+				 n.TYPE_URI_ID_PART,
+				 n.NAME_URI_NS_PART_ID,
+				 n.NAME_URI_ID_PART,
+				 n.TAXON_URI_NS_PART_ID,
+				 n.TAXON_URI_ID_PART,
+				 n.RESOURCE_URI_NS_PART_ID,
+				 n.RESOURCE_URI_ID_PART,
+				 n.LITERAL,
+				 n.NAME_ID,
+				 n.INSTANCE_ID,
+				 'Y' 				-- IS_SYNTHETIC
+				from
+				link_treewalk_replace_subnode w
+					join tree_node n on w.subnode_id = n.id
+				''',
+                        { PreparedStatement qry ->
+                            qry.setLong(1, n.root.id)
+                            qry.executeUpdate()
+                        }
+
+                // copy all sublinks
+                // if a sublink is one of the links for which we are replacing the subnode, then use the new subnode
+                // as the link subnode. Otherwise, just copy the link as is.
+
+
+                withQ cnct, '''insert into tree_link (
+				 ID,
+				 lock_version,
+				 SUPERNODE_ID,
+				 SUBNODE_ID,
+				 TYPE_URI_NS_PART_ID,
+				 TYPE_URI_ID_PART,
+				 LINK_SEQ,
+				 VERSIONING_METHOD,
+				 IS_SYNTHETIC
+				)
+				select
+				 nextval('nsl_global_seq'), 	--ID
+				 1, 							--VERSION
+				 w.supernode_id, 				--SUPERNODE_ID
+				 case when ww.id is null then l.SUBNODE_ID else ww.new_subnode_id end ,
+				 l.TYPE_URI_NS_PART_ID,
+				 l.TYPE_URI_ID_PART,
+				 l.LINK_SEQ,
+				 l.VERSIONING_METHOD,
+				 'Y' 							--IS_SYNTHETIC
+				from
+				link_treewalk_replace_subnode w
+				join tree_link l on w.subnode_id = l.supernode_id
+				left join link_treewalk_replace_subnode ww on l.id = ww.id
+				''',
+                        { PreparedStatement qry ->
+                            qry.executeUpdate()
+                        }
+
+                // finally, update any links whose supernode is one of our draft nodes
+
+                withQ cnct, '''
+                    update tree_link
+                    set subnode_id = (
+                        select new_subnode_id
+                        from link_treewalk_replace_subnode w
+                        where tree_link.id = w.id
+                    )
+                    where id in
+                    (select w.id
+                    from link_treewalk_replace_subnode w
+                    join tree_node on w.supernode_id = tree_node.id
+                    where tree_node.tree_arrangement_id = ?)
+                ''',
+                { PreparedStatement qry ->
+                    qry.setLong(1, n.root.id)
+                    qry.executeUpdate()
+                }
+            }
+        }
+    }
+
     /*
     Move nodes from one tree to another starting from a given parent node.
      */

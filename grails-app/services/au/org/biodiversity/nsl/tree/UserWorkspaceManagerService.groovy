@@ -438,6 +438,8 @@ class UserWorkspaceManagerService {
 
         Event e = basicOperationsService.newEvent(node.namespace(), "checkin of ${node}")
         node = DomainUtils.refetchNode(node);
+        basicOperationsService.createCopiesOfAllNonTreeNodes(e, node);
+        node = DomainUtils.refetchNode(node);
         basicOperationsService.persistNode(e, node);
         node = DomainUtils.refetchNode(node);
         Map<Node, Node> v = versioningService.getCheckinVersioningMap(node.root, node.prev.root, node);
