@@ -738,13 +738,13 @@ public class TreeOperationsService {
         Node moveFromCheckout
         Node moveToCheckout
 
-        if (higherThan(existingMoveFrom, existingMoveTo)) {
+        if (queryService.countPaths(existingMoveFrom, existingMoveTo) != 0) {
             // the move from is higher up n the tree than the move to
             moveFromCheckout = adoptAndCheckOut(tempSpace, existingMoveFrom)
             moveToCheckout = basicOperationsService.checkoutNode(moveFromCheckout, existingMoveTo)
 
         } else {
-            if (higherThan(existingMoveTo, existingMoveFrom)) {
+            if (queryService.countPaths(existingMoveTo, existingMoveFrom) != 0) {
                 // the move to is higher up in the tree than the move from
                 moveToCheckout = adoptAndCheckOut(tempSpace, existingMoveTo)
                 moveFromCheckout = basicOperationsService.checkoutNode(moveToCheckout, existingMoveFrom)
@@ -772,20 +772,6 @@ public class TreeOperationsService {
         basicOperationsService.checkoutLink(link)
         link = DomainUtils.refetchLink(link)
         return link.subnode
-    }
-
-    /**
-     * Is Node A higher in the tree than Node B
-     * @param a
-     * @param b
-     * @return true if a higher than b (a>b)
-     */
-    private static boolean higherThan(Node a, Node b) {
-        Node pointer = b
-        while (pointer && pointer != a) {
-            pointer = DomainUtils.getSingleSupernode(pointer)
-        }
-        return pointer != null
     }
 
     void deleteName(Arrangement arrangement, Uri nameUri, Uri replacementNameUri) {
