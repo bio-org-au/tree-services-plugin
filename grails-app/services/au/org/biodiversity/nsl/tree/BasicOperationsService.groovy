@@ -202,7 +202,7 @@ class BasicOperationsService {
      * @return
      */
 
-    Arrangement createClassification(Event event, String label, String description) {
+    Arrangement createClassification(Event event, String label, String description, boolean shared) {
         mustHave(event: event, label: label) {
             clearAndFlush {
                 event = DomainUtils.refetchEvent(event)
@@ -213,7 +213,8 @@ class BasicOperationsService {
                         synthetic: 'N',
                         label: label,
                         description: description,
-                        owner: event.authUser
+                        owner: event.authUser,
+                        shared: shared
                 )
                 classification.save();
 
@@ -272,7 +273,7 @@ class BasicOperationsService {
      * @return
      */
 
-    Arrangement createWorkspace(Event event, String owner, String title, String description) {
+    Arrangement createWorkspace(Event event, String owner, boolean shared, String title, String description) {
         mustHave(event: event, owner: owner, title: title) {
             clearAndFlush {
                 event = DomainUtils.refetchEvent(event)
@@ -282,6 +283,7 @@ class BasicOperationsService {
                         arrangementType: ArrangementType.U,
                         synthetic: 'N',
                         owner: owner,
+                        shared: shared,
                         title: title,
                         description: description)
                 workspace.save();
@@ -307,6 +309,25 @@ class BasicOperationsService {
                 return workspace
             } as Arrangement
         } as Arrangement
+    }
+
+    void updateWorkspace(Arrangement arrangement, boolean shared, String title, String description) {
+        mustHave(arrangement: arrangement) {
+            clearAndFlush {
+                arrangement = DomainUtils.refetchArrangement(arrangement)
+
+                if(arrangement.arrangementType != ArrangementType.U) throw new IllegalArgumentException("Not a workspace");
+
+                if (!title) {
+                    throw new IllegalArgumentException("Workspaces must have a title");
+                }
+
+                arrangement.shared = shared;
+                arrangement.title = title;
+                arrangement.description = description;
+                arrangement.save();
+            }
+        }
     }
 
     void updateArrangement(Arrangement arrangement, String title, String description) {

@@ -26,12 +26,12 @@ class UserWorkspaceManagerService {
     DataSource dataSource_nsl;
 
 
-    Arrangement createWorkspace(Namespace namespace, String owner, String title, String description, Node checkout) {
+    Arrangement createWorkspace(Namespace namespace, String owner, boolean shared, String title, String description, Node checkout) {
         if (!owner) throw new IllegalArgumentException("owner may not be null");
         if (!title) throw new IllegalArgumentException("title may not be null");
 
         Event e = basicOperationsService.newEvent namespace, "Create workspace", owner
-        Arrangement ws = basicOperationsService.createWorkspace(e, owner, title, description)
+        Arrangement ws = basicOperationsService.createWorkspace(e, owner, shared, title, description)
 
         checkout = DomainUtils.refetchNode(checkout)
 
@@ -49,10 +49,10 @@ class UserWorkspaceManagerService {
     }
 
 
-    void updateWorkspace(Arrangement arrangement, String title, String description) {
+    void updateWorkspace(Arrangement arrangement, boolean shared, String title, String description) {
         if (!arrangement) throw new IllegalArgumentException("arrangement may not be null");
         if (!arrangement.arrangementType == ArrangementType.U) throw new IllegalArgumentException("arrangement must be a workspace");
-        basicOperationsService.updateArrangement(arrangement, title, description);
+        basicOperationsService.updateWorkspace(arrangement, shared, title, description);
     }
 
     def moveWorkspaceNode(Arrangement ws, Node target, Node node) {

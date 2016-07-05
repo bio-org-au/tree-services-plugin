@@ -112,7 +112,7 @@ class ClassificationManagerService {
         }
 
         Event e = basicOperationsService.newEvent(namespace, "Creating classification ${params.label}")
-        Arrangement newClass = basicOperationsService.createClassification(e, params.label, params.description)
+        Arrangement newClass = basicOperationsService.createClassification(e, params.label, params.description, params.shared)
 
         if (copyNodes) {
             log.debug "temp arrangement"
@@ -162,7 +162,6 @@ class ClassificationManagerService {
     void updateClassification(Map params = [:], Arrangement a) throws ServiceException {
         // todo - use Peter's "must have" thing
         if (!a) throw new IllegalArgumentException("Arrangement must be specified")
-        if (!params.namespace) throw new IllegalArgumentException("namespace must be specified");
         if (!params.label) throw new IllegalArgumentException("label must be specified");
         if (!params.description) throw new IllegalArgumentException("description must be specified");
 
@@ -172,6 +171,8 @@ class ClassificationManagerService {
 
         if (params['label']) a.label = params.label;
         if (params.containsKey('description')) a.description = params.description;
+
+        if(params.containsKey('shared')) a.shared = params.shared;
         a.save();
     }
 
