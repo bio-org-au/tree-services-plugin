@@ -107,6 +107,66 @@ class UserWorkspaceManagerService {
 
     }
 
+    def moveWorkspaceSubnodes(Arrangement ws, Node target, Node node) {
+        if (target == node) throw new IllegalArgumentException("node == target");
+
+        if (node == ws.node) throw new IllegalArgumentException("node == ws.node");
+
+        List<Node> reversePath = queryService.findPath(node, target)
+
+        if (reversePath && !reversePath.isEmpty()) throw new IllegalArgumentException("node is supernode of target");
+
+        if (DomainUtils.isCheckedIn(target)) {
+            List<Node> pathToTarget = queryService.findPath(ws.node, target)
+            if (pathToTarget.isEmpty()) throw new IllegalArgumentException("target not in workspace");
+
+            target = basicOperationsService.checkoutNode(ws.node, target);
+
+            ws = DomainUtils.refetchArrangement(ws);
+            target = DomainUtils.refetchNode(target);
+            node = DomainUtils.refetchNode(node);
+        }
+
+        if (DomainUtils.isCheckedIn(node)) {
+            List<Node> pathToNode = queryService.findPath(ws.node, node)
+            if (pathToNode.isEmpty()) throw new IllegalArgumentException("node not in workspace");
+
+            node = basicOperationsService.checkoutNode(ws.node, node);
+
+            ws = DomainUtils.refetchArrangement(ws);
+            target = DomainUtils.refetchNode(target);
+            node = DomainUtils.refetchNode(node);
+        }
+
+        Set<Link> links = new HashSet<Link>(node.subLink.findAll {it.subnode.internalType == NodeInternalType.T} );
+
+        Link prevLink = null;
+
+        for(Link l: links) {
+            l = DomainUtils.refetchLink(l);
+            if(DomainUtils.isCheckedIn(l.subnode)) {
+                prevLink = basicOperationsService.adoptNode(target, l.subnode, l.versioningMethod, linkType: DomainUtils.getRawLinkTypeUri(l), prevLink: prevLink);
+                l = DomainUtils.refetchLink(l);
+                basicOperationsService.deleteLink(l.supernode, l.linkSeq);
+            }
+            else {
+                // this is failing when more than one link needs doing, becaue
+                prevLink = basicOperationsService.simpleMoveDraftLink(l, DomainUtils.refetchNode(target), prevLink: prevLink);
+            }
+
+            ws = DomainUtils.refetchArrangement(ws);
+            target = DomainUtils.refetchNode(target);
+            node = DomainUtils.refetchNode(node);
+        }
+
+        return [
+                target  : target,
+                modified: [target, node]
+        ]
+
+
+    }
+
     def adoptNode(Arrangement ws, Node target, Node node) {
         if (target == node) throw new IllegalArgumentException("node == target");
 

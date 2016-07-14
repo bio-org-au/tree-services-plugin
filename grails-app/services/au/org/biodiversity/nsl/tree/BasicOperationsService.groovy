@@ -829,8 +829,26 @@ class BasicOperationsService {
         }
     }
 
-    public void simpleMoveDraftLink(Link l, Node newSupernode) {
+    public Link simpleMoveDraftLink(Map params = [:], Link l, Node newSupernode) {
         mustHave(link: l, newSupernode: newSupernode) {
+
+            Integer linkSeq = params.linkSeq as Integer
+            Link prevLink = params.prevLink as Link
+
+            if(!linkSeq) {
+                if (prevLink) {
+                    linkSeq = prevLink.linkSeq;
+                } else {
+                    linkSeq = 0;
+                    for (Link ll : newSupernode.subLink) {
+                        linkSeq = Math.max(linkSeq, ll.linkSeq);
+                    }
+                }
+                linkSeq = linkSeq + 1;
+            }
+
+            if(linkSeq <= 0) throw new IllegalArgumentException("linkSeq ${linkSeq} must be positive");
+
             l = DomainUtils.refetchLink(l)
             newSupernode = DomainUtils.refetchNode(newSupernode)
 
@@ -847,16 +865,12 @@ class BasicOperationsService {
                 }
             }
 
-            int linkSeq = 0;
-            for (Link ll : newSupernode.subLink) {
-                linkSeq = Math.max(linkSeq, ll.linkSeq);
-            }
-
-
             l.supernode = newSupernode;
-            l.linkSeq = linkSeq + 1;
+            l.linkSeq = linkSeq;
 
             l.save();
+
+            return l;
         }
     }
 
@@ -1278,6 +1292,11 @@ class BasicOperationsService {
 
                 Uri linkType = params.linkType as Uri
                 Integer linkSeq = params.seq as Integer
+                Link prevLink = params.prevLink as Link
+
+                if(!linkSeq && prevLink) {
+                    linkSeq = prevLink.linkSeq + 1
+                }
 
                 if (linkSeq != null && linkSeq.intValue() <= 0) {
                     throw new IllegalArgumentException("Link sequence ${linkSeq} must be positive or null")
