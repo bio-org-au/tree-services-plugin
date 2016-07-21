@@ -536,6 +536,73 @@ and subnode.next is null
 ''', [arrangement: classification, nslInstance: nslInstance])
     }
 
+    List findNamesInSubtree(Node node, String nameLike) {
+        List l = [];
+
+        doWork sessionFactory_nsl, { Connection cnct ->
+
+// well, this is rather nasty!
+// find the names. find any current nodes whose instances have the name, or whose instances have
+// a synonym with the name. then run up the current tree, until we stop at the node we are looking for.
+
+
+            withQ cnct, '''
+with recursive names as (
+select id from name where LOWER(simple_name) like LOWER(?)
+),
+matching_nodes as (
+  select tree_node.id tree_node_id, instance.id as instance_id
+  from tree_node join instance on tree_node.instance_id = instance.id
+  where instance.name_id in (select id from names)
+  and tree_node.internal_type = 'T'
+  and tree_node.replaced_at_id is null
+union
+  select tree_node.id tree_node_id, syn.id as instance_id
+  from tree_node join instance on tree_node.instance_id = instance.id
+    join instance as syn on instance.id = syn.cited_by_id
+  where syn.name_id in (select id from names)
+  and tree_node.internal_type = 'T'
+  and tree_node.replaced_at_id is null
+)
+,
+tree_runner as (
+  select matching_nodes.tree_node_id as running_node_id, matching_nodes.*
+  from matching_nodes
+union all
+  select tree_link.supernode_id as running_node_id, tree_runner.tree_node_id, tree_runner.instance_id
+  from tree_runner join tree_link on tree_link.subnode_id = tree_runner.running_node_id
+  join tree_node on tree_link.supernode_id = tree_node.id
+  where
+  tree_runner.running_node_id <> ? -- clip the search
+  and tree_node.replaced_at_id is null
+)
+select tree_runner.*
+from tree_runner
+where tree_runner.running_node_id = ?
+			''', { PreparedStatement sql ->
+                sql.setString(1, nameLike)
+                sql.setLong(2, node.id)
+                sql.setLong(3, node.id)
+                ResultSet rs = sql.executeQuery()
+                try {
+                    while (rs.next()) {
+                        l.add([
+                            node: Node.get(rs.getLong('tree_node_id')),
+                            matchedInstance:  Instance.get(rs.getLong('instance_id'))
+                        ])
+                    }
+                }
+                finally {
+                    rs.close()
+                }
+            }
+        }
+
+        return l;
+
+    }
+
+
 /**
  * Looks for a node in a tree, finding either the node itself or a checked-out version of the node. This is a common
  * thing needing to be done.
