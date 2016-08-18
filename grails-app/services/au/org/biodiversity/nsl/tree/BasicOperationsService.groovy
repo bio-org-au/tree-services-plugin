@@ -273,13 +273,20 @@ class BasicOperationsService {
      * @return
      */
 
-    Arrangement createWorkspace(Event event, String owner, boolean shared, String title, String description) {
+    Arrangement createWorkspace(Event event, Arrangement baseArrangement, String owner, boolean shared, String title, String description) {
         mustHave(event: event, owner: owner, title: title) {
             clearAndFlush {
                 event = DomainUtils.refetchEvent(event)
 
+                baseArrangement = DomainUtils.refetchArrangement(baseArrangement);
+
+                if(event.namespace != baseArrangement.namespace) {
+                    thow new IllegalArgumentException("event.namespace != baseArrangement.namespace");
+                }
+
                 Arrangement workspace = new Arrangement(
                         namespace: event.namespace,
+                        baseArrangement: baseArrangement,
                         arrangementType: ArrangementType.U,
                         synthetic: 'N',
                         owner: owner,

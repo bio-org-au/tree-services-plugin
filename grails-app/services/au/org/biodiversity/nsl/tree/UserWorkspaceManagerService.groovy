@@ -26,18 +26,27 @@ class UserWorkspaceManagerService {
     DataSource dataSource_nsl;
 
 
-    Arrangement createWorkspace(Namespace namespace, String owner, boolean shared, String title, String description, Node checkout) {
+    Arrangement createWorkspace(Namespace namespace, Arrangement baseTree, String owner, boolean shared, String title, String description) {
         if (!owner) throw new IllegalArgumentException("owner may not be null");
         if (!title) throw new IllegalArgumentException("title may not be null");
+        if (!baseTree) throw new IllegalArgumentException("baseTree may not be null");
 
-        Event e = basicOperationsService.newEvent namespace, "Create workspace", owner
-        Arrangement ws = basicOperationsService.createWorkspace(e, owner, shared, title, description)
-
-        checkout = DomainUtils.refetchNode(checkout)
-
-        if (checkout) {
-            basicOperationsService.adoptNode(ws.node, checkout, VersioningMethod.V, linkType: DomainUtils.getBoatreeUri('workspace-top-node'));
+        if(baseTree.arrangementType != ArrangementType.P) {
+            throw new IllegalArgumentException("baseTree must be a classifcation");
         }
+
+        Event e = basicOperationsService.newEvent namespace, "Create workspace on ${baseTree.label} for ${owner}", owner
+        baseTree = DomainUtils.refetchArrangement(baseTree);
+
+        Arrangement ws = basicOperationsService.createWorkspace(e, baseTree, owner, shared, title, description)
+
+        baseTree = DomainUtils.refetchArrangement(baseTree);
+
+        Node checkout = DomainUtils.getSingleSubnode(baseTree.node)
+
+        basicOperationsService.adoptNode(ws.node, checkout, VersioningMethod.V, linkType: DomainUtils.getBoatreeUri('workspace-top-node'));
+
+        ws = DomainUtils.refetchArrangement(ws)
 
         return ws;
     }
