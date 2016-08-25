@@ -649,6 +649,79 @@ AND n.id NOT IN (SELECT id FROM nodes)
         return result
     }
 
+    Arrangement rebuildNameTree(Namespace namespace, String label, String description) {
+        if(!label) throw IllegalArgumentException("label cannot be null");
+
+        Arrangement tree = Arrangement.findByNamespaceAndLabel(namespace, label)
+
+        if(tree) {
+            basicOperationsService.deleteArrangement(tree);
+            tree = null;
+        }
+
+        Event e = basicOperationsService.newEvent(namespace, "rebuild name tree ${label}")
+        tree = basicOperationsService.createClassification(e, label, description, true)
+
+        Node topNode = DomainUtils.getSingleSubnode(tree.node);
+
+        UriNs nslName = UriNs.findByLabel('nsl-name')
+
+        Sql sql = Sql.newInstance(dataSource_nsl);
+
+        sql.execute """
+insert into tree_node(
+  id, lock_version,
+  tree_arrangement_id, checked_in_at_id, internal_type,
+  is_synthetic, type_uri_ns_part_id, type_uri_id_part,
+  name_id, name_uri_ns_part_id, name_uri_id_part
+)
+select
+nextval('nsl_global_seq'),  -- id,
+1,   -- lock_version,
+?,  -- tree_arrangement_id,
+?,   -- checked_in_at_id,
+'T',  -- internal_type,
+'Y',  -- is_synthetic,
+1,  -- type_uri_ns_part_id,
+'placement',  -- type_uri_id_part
+n.id,  -- name_id,
+?,  -- name_uri_ns_part_id,
+n.id  -- name_uri_id_part
+from name n join name_type nt on n.name_type_id = nt.id and nt.scientific = true
+where n.namespace_id = ?
+""", [
+                tree.id,        // tree_arrangement_id,
+                e.id,           // checked_in_at_id,
+                nslName.id,     // name_uri_ns_part_id,
+                namespace.id    // where n.namespace_id = ?
+    ]
+
+
+        sql.execute """
+insert into tree_link (id, lock_version, link_seq, supernode_id, subnode_id, is_synthetic, type_uri_ns_part_id, type_uri_id_part, versioning_method)
+SELECT
+nextval('nsl_global_seq'), -- id,
+1, -- lock_version,
+n.id, -- link_seq,
+coalesce(n2.id, ?),-- supernode_id,
+n.id, -- subnode_id,
+'Y', -- is_synthetic,
+0, -- type_uri_ns_part_id,
+NULL, -- type_uri_id_part,
+'V' -- versioning_method
+from tree_node n
+join name on n.name_id = name.id
+left outer join tree_node n2 on n2.name_id = name.parent_id and n2.tree_arrangement_id = ?
+where n.tree_arrangement_id = ?
+""", [
+        topNode.id,        // coalesce(n2.id, ?),-- supernode_id,
+        tree.id,         // n2.tree_arrangement_id = ?
+        tree.id        // n.tree_arrangement_id = ?
+     ]
+
+        return tree
+    }
+
 
     void dump(Node n, int d = 0, Arrangement tree = null) {
         n = Node.get(n.id);
