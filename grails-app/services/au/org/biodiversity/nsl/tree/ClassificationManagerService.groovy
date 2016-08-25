@@ -687,7 +687,7 @@ nextval('nsl_global_seq'),  -- id,
 n.id,  -- name_id,
 ?,  -- name_uri_ns_part_id,
 n.id  -- name_uri_id_part
-from name n join name_type nt on n.name_type_id = nt.id and nt.scientific = true
+from name n join name_type nt on n.name_type_id = nt.id and nt.name <> 'common'
 where n.namespace_id = ?
 """, [
                 tree.id,        // tree_arrangement_id,
