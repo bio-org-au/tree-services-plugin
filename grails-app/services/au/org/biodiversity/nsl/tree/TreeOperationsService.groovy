@@ -237,8 +237,12 @@ public class TreeOperationsService {
                     if (!superNode) throw new IllegalArgumentException("Classification ${classification} is not a properly-formed tree")
                 }
 
-                return addNameToClassification(superNode, nameUri, taxonUri, name, instance, params, profileItems,
+                Node result =  addNameToClassification(superNode, nameUri, taxonUri, name, instance, params, profileItems,
                         supernameUri.toString(), classification, authUser)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(classification))
+
+                return result;
 
             } as Node
         } as Node
@@ -306,8 +310,12 @@ public class TreeOperationsService {
                     superNode = DomainUtils.getSingleSubnode(classification.node)
                     if (!superNode) throw new IllegalArgumentException("Classification ${classification} is not a properly-formed tree")
                 }
-                return addNameToClassification(superNode, nameUri, taxonUri, name, instance, params, profileItems,
+
+                Node result =  addNameToClassification(superNode, nameUri, taxonUri, name, instance, params, profileItems,
                         supername ? supername.id as String : "Top Level", classification, authUser)
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(classification))
+
+                return result;
             } as Node
         } as Node
     }
@@ -468,9 +476,13 @@ public class TreeOperationsService {
                 }
 
 
-                return updateNameInClassification(existingNode, existingNodeSingleSuperlink, existingMoveFrom, existingMoveTo,
+                Node result =  updateNameInClassification(existingNode, existingNodeSingleSuperlink, existingMoveFrom, existingMoveTo,
                         taxonUri, nodeTypeUri, linkTypeUri, linkSeq, profileItems, instance,
                         classification, authUser)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(classification))
+
+                return result;
             } as Node
         } as Node
     }
@@ -549,9 +561,13 @@ public class TreeOperationsService {
                     checkCurrentNslInstanceNotInTree(classification, instance, 'instance')
                 }
 
-                return updateNameInClassification(existingNode, existingNodeSingleSuperlink, existingMoveFrom, existingMoveTo,
+                Node result =  updateNameInClassification(existingNode, existingNodeSingleSuperlink, existingMoveFrom, existingMoveTo,
                         taxonUri, nodeTypeUri, linkTypeUri, linkSeq, profileItems, instance,
                         classification, authUser)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(classification))
+
+                return result;
             } as Node
         } as Node
     }
@@ -799,6 +815,10 @@ public class TreeOperationsService {
                 Node existingNode = findSingleName(arrangement, nameUri, 'name')
 
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
+
+                return result;
             }
         }
     }
@@ -829,6 +849,10 @@ public class TreeOperationsService {
                 Node existingNode = findSingleNslName(arrangement, name, 'name')
 
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(classification))
+
+                return result;
             }
         }
     }
@@ -901,6 +925,10 @@ public class TreeOperationsService {
                 arrangement = DomainUtils.refetchArrangement(arrangement)
 
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
+
+                return result;
             }
         }
     }
@@ -919,6 +947,8 @@ public class TreeOperationsService {
                 Node existingName = findSingleName(arrangement, nameUri, 'name')
 
                 addProfileData(existingName, datatype, property, nameUri.toString(), data, arrangement)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
             }
         }
     }
@@ -936,6 +966,8 @@ public class TreeOperationsService {
                 Node existingName = findSingleNslName(arrangement, name, 'name')
 
                 addProfileData(existingName, datatype, property, name.id.toString(), data, arrangement)
+
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
             }
         }
     }
@@ -1025,4 +1057,5 @@ public class TreeOperationsService {
         sessionFactory_nsl.getCurrentSession().clear();
         return DomainUtils.refetchObject(ret);
     }
+
 }

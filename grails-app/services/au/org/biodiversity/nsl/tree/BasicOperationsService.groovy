@@ -2708,4 +2708,38 @@ where tree_node.id in (
         sessionFactory_nsl.getCurrentSession().clear();
         return DomainUtils.refetchObject(ret);
     }
+
+    public void checkClassificationIntegrity(Arrangement a) throws ServiceException {
+        if(!a || a.arrangementType != ArrangementType.P) throw new IllegalArgumentException();
+
+        // every current node in a classification must have one and only one parent in the classification, except for the root node
+
+        Message msg = new Message(Msg.CLASSIFICATION_HAS_NODES_WITH_MULTIPLE_CURRENT_SUPERNODES, a);
+
+        withQ cnct, '''
+select n.id, count(p.id) ct
+from tree_arrangement a
+join tree_node n on a.id = n.tree_arrangement_id and n.replaced_at_id is null and n.id <> a.node_id
+left join tree_link l on l.subnode_id = n.id
+left join tree_node p on l.supernode_id = p.id and p.replaced_at_id is null and (a.id = p.tree_arrangement_id or a.base_arrangement_id = p.tree_arrangement_id)
+where a.id = ?
+and n.internal_type <> 'V'
+group by n.id
+having count(p.id) <> 1
+									''', { PreparedStatement qry ->
+            qry.setLong(1, a.id);
+            ResultSet rs = qry.executeQuery();
+            while(rs.next() && msg.nested.size() < 20) {
+                Node node = Node.get(rs.getLong(1));
+                List<?> args = [node, node?.name];
+
+                msg.nested.add(new Message(Msg.CLASSIFICATION_NODE_WITH_MULTIPLE_CURRENT_SUPERNODES, args));
+            }
+        }
+
+        if(!msg.nested.isEmpty()) {
+            throw new ServiceException(msg);
+        }
+
+    }
 }
