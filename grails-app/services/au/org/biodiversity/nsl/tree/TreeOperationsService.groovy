@@ -817,8 +817,6 @@ public class TreeOperationsService {
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
 
                 basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
-
-                return result;
             }
         }
     }
@@ -850,9 +848,7 @@ public class TreeOperationsService {
 
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
 
-                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(classification))
-
-                return result;
+                basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
             }
         }
     }
@@ -886,7 +882,7 @@ public class TreeOperationsService {
     }
 
     void zz() {
-    Throwable t = new Throwable();
+        Throwable t = new Throwable();
         int i=0;
         while ( !t.getStackTrace()[i].getMethodName().endsWith("zz"))
             i++;
@@ -898,7 +894,7 @@ public class TreeOperationsService {
 
         log.debug("${e.getMethodName()}(${e.getFileName()}:${e.getLineNumber()})");
     }
-    
+
     void deleteNslInstance(Arrangement arrangement, Instance instance, Instance replacementInstance, String authUser) {
 
         mustHave(arrangement: arrangement, name: instance) {
@@ -927,8 +923,6 @@ public class TreeOperationsService {
                 deleteNodeFromClassification(existingNode, tempSpace, existingReplacement, arrangement, authUser)
 
                 basicOperationsService.checkClassificationIntegrity(DomainUtils.refetchArrangement(arrangement))
-
-                return result;
             }
         }
     }
