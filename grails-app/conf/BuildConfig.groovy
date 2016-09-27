@@ -93,7 +93,7 @@ grails.project.dependency.resolution = {
             export = false
         }
 
-		compile ('au.org.biodiversity.grails.plugins:nsl-domain-plugin:1.1-SNAPSHOT'){
+		compile ('au.org.biodiversity.grails.plugins:nsl-domain-plugin:1.2-SNAPSHOT'){
 			excludes "scaffolding"
 			excludes "cache"
 		}
