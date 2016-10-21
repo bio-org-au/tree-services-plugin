@@ -526,4 +526,24 @@ class UserWorkspaceManagerService {
         ]
 
     }
+
+    ////////////////////////////////////////////
+    // these operations are the two operations required for the NSL-Editor. Yes, we are re-inventing the wheel here.
+
+    Message placeNameOnTree(Arrangement tree, Name name, Instance instance, Name parentName, String placementType) {
+        Message error = Message.makeMsg(Msg.placeNameOnTree, [name, tree]);
+
+        error.nested.add(Message.makeMsg(Msg.TODO, ['Implement placeNameOnTree']))
+
+        if(!error.nested.isEmpty()) ServiceException.raise(error);
+    }
+
+    Message removeNameFromTree(Arrangement tree, Name name) {
+        Message error = Message.makeMsg(Msg.removeNameFromTree, [name, tree]);
+
+        error.nested.add(Message.makeMsg(Msg.TODO, ['Implement removeNameFromTree']))
+
+        if(!error.nested.isEmpty()) ServiceException.raise(error);
+    }
+
 }

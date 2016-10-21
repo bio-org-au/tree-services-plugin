@@ -25,7 +25,8 @@ package au.org.biodiversity.nsl.tree;
 public enum Msg {
 	NO_MESSAGE,
 	EMPTY,
-	
+	TODO,
+
 	// BasicOperationsService
 	
 	createDraftNode, 
@@ -101,7 +102,13 @@ public enum Msg {
 	CANNOT_REPLACE_NODE_WITH_NODE_BEING_REPLACED,
 	CANNOT_REPLACE_NODE_WITH_NODE_BEING_SYNTHETICALLY_REPLACED,
 	CANNOT_REPLACE_NODE_WITH_NODE_ABOVE_A_TRACKING_LINK_ETC,
-	NODE_WOULD_BE_ORPHANED;
+	NODE_WOULD_BE_ORPHANED,
+
+	// USerWorkspaceManagerService
+
+	placeNameOnTree,
+	removeNameFromTree;
+
 	
 	public String getKey() { return "nsl2.boatree.service_exception." + name(); }
 }
