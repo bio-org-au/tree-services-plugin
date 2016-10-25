@@ -107,8 +107,10 @@ public enum Msg {
 	// USerWorkspaceManagerService
 
 	placeNameOnTree,
-	removeNameFromTree;
+	removeNameFromTree,
+	NODE_HAS_SUBTAXA,
 
+	this_is_just_an_end_stop;
 	
 	public String getKey() { return "nsl2.boatree.service_exception." + name(); }
 }

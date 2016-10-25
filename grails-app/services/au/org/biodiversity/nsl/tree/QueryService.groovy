@@ -758,7 +758,7 @@ select distinct start_id from ll where supernode_id = ?
                                     multipleLinksFound.nested.add Link.get(rs.getLong(1))
                                 }
 
-                                ServiceException.raise ServiceException.makeMsg(Msg.findNodeCurrentOrCheckedout, [superNode, findNode, multipleLinksFound])
+                                ServiceException.raise ServiceException.makeMsg(Msg.findNodeCurrentOrCheckedout, [supernode, findNode, multipleLinksFound])
                             }
 
                         }

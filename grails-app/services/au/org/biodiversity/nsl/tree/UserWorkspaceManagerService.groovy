@@ -31,7 +31,7 @@ class UserWorkspaceManagerService {
         if (!title) throw new IllegalArgumentException("title may not be null");
         if (!baseTree) throw new IllegalArgumentException("baseTree may not be null");
 
-        if(baseTree.arrangementType != ArrangementType.P) {
+        if (baseTree.arrangementType != ArrangementType.P) {
             throw new IllegalArgumentException("baseTree must be a classifcation");
         }
 
@@ -147,18 +147,17 @@ class UserWorkspaceManagerService {
             node = DomainUtils.refetchNode(node);
         }
 
-        Set<Link> links = new HashSet<Link>(node.subLink.findAll {it.subnode.internalType == NodeInternalType.T} );
+        Set<Link> links = new HashSet<Link>(node.subLink.findAll { it.subnode.internalType == NodeInternalType.T });
 
         Link prevLink = null;
 
-        for(Link l: links) {
+        for (Link l : links) {
             l = DomainUtils.refetchLink(l);
-            if(DomainUtils.isCheckedIn(l.subnode)) {
+            if (DomainUtils.isCheckedIn(l.subnode)) {
                 prevLink = basicOperationsService.adoptNode(target, l.subnode, l.versioningMethod, linkType: DomainUtils.getRawLinkTypeUri(l), prevLink: prevLink);
                 l = DomainUtils.refetchLink(l);
                 basicOperationsService.deleteLink(l.supernode, l.linkSeq);
-            }
-            else {
+            } else {
                 // this is failing when more than one link needs doing, becaue
                 prevLink = basicOperationsService.simpleMoveDraftLink(l, DomainUtils.refetchNode(target), prevLink: prevLink);
             }
@@ -477,7 +476,7 @@ class UserWorkspaceManagerService {
         if (!target) throw new IllegalArgumentException("null target");
         if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
 
-        if(target.internalType != NodeInternalType.T) throw new IllegalArgumentException("not a taxonomic node")
+        if (target.internalType != NodeInternalType.T) throw new IllegalArgumentException("not a taxonomic node")
         if (!nodeType) nodeType = DomainUtils.getDefaultNodeTypeUriFor(target.internalType);
 
         if (DomainUtils.isCheckedIn(target)) {
@@ -500,10 +499,10 @@ class UserWorkspaceManagerService {
     }
 
     def performCheckin(Node node) {
-        if(!node) throw new IllegalArgumentException("null node");
-        if(node.checkedInAt) throw new IllegalArgumentException("node not draft");
-        if(!node.prev) throw new IllegalArgumentException("node not a checkout");
-        if(node.prev.replacedAt) throw new IllegalArgumentException("target checkin is already replaced");
+        if (!node) throw new IllegalArgumentException("null node");
+        if (node.checkedInAt) throw new IllegalArgumentException("node not draft");
+        if (!node.prev) throw new IllegalArgumentException("node not a checkout");
+        if (node.prev.replacedAt) throw new IllegalArgumentException("target checkin is already replaced");
 
         Event e = basicOperationsService.newEvent(node.namespace(), "checkin of ${node}")
         node = DomainUtils.refetchNode(node);
@@ -530,20 +529,70 @@ class UserWorkspaceManagerService {
     ////////////////////////////////////////////
     // these operations are the two operations required for the NSL-Editor. Yes, we are re-inventing the wheel here.
 
-    Message placeNameOnTree(Arrangement tree, Name name, Instance instance, Name parentName, String placementType) {
-        Message error = Message.makeMsg(Msg.placeNameOnTree, [name, tree]);
+    Message placeNameOnTree(Arrangement ws, Name name, Instance instance, Name parentName, String placementType) {
+        if (!tree) throw new IllegalArgumentException("null tree");
+        if (!name) throw new IllegalArgumentException("null name");
+        if (!instance) throw new IllegalArgumentException("null instance");
+        if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
+
+        Message error = Message.makeMsg(Msg.placeNameOnTree, [name, ws]);
+
+
 
         error.nested.add(Message.makeMsg(Msg.TODO, ['Implement placeNameOnTree']))
 
-        if(!error.nested.isEmpty()) ServiceException.raise(error);
+        if (!error.nested.isEmpty()) ServiceException.raise(error);
+        else return null;
     }
 
-    Message removeNameFromTree(Arrangement tree, Name name) {
-        Message error = Message.makeMsg(Msg.removeNameFromTree, [name, tree]);
+    Message removeNameFromTree(Arrangement ws, Name name) {
+        if (!ws) throw new IllegalArgumentException("null tree");
+        if (!name) throw new IllegalArgumentException("null name");
+        if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
 
-        error.nested.add(Message.makeMsg(Msg.TODO, ['Implement removeNameFromTree']))
+        Message error = Message.makeMsg(Msg.removeNameFromTree, [name, ws]);
 
-        if(!error.nested.isEmpty()) ServiceException.raise(error);
+        try {
+            Collection<Node> currentNodeList = queryService.findCurrentNslName(ws, name);
+
+            if (currentNodeList.isEmpty()) {
+                error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]));
+                ServiceException.raise(error)
+            } else if (currentNodeList.size() > 1) {
+                error.nested.add(Message.makeMsg(Msg.THING_FOUND_IN_ARRANGEMENT_MULTIPLE_TIMES, [ws, name, "Name"]));
+                ServiceException.raise(error)
+            }
+
+            Node currentNode = currentNodeList.first();
+
+            if (!DomainUtils.getSubtaxaAsList().isEmpty()) {
+                error.nested.add(Message.makeMsg(Msg.NODE_HAS_SUBTAXA, [currentNode]));
+                ServiceException.raise(error)
+            }
+
+            Link currentLink = queryService.findNodeCurrentOrCheckedout(ws.node, currentNode)
+
+            if (DomainUtils.isCheckedIn(currentLink.supernode)) {
+                currentNode = basicOperationsService.checkoutNode(ws.node, currentNode);
+            }
+
+            // it's a little tricky, but this does cover all possibilities.
+            // note that a non-draft node never has a draft node as a subnode
+
+            if (DomainUtils.isCheckedIn(currentLink.subnode)) {
+                basicOperationsService.deleteLink(currentNode, currentLink.linkSeq);
+            } else {
+                basicOperationsService.deleteDraftNode(currentLink.subnode);
+            }
+        }
+        catch (ServiceException ex) {
+            if(ex.msg == error)
+                throw ex;
+            else {
+                error.nested.add(ex.msg);
+                ServiceException.raise(error);
+            }
+        }
+        return null;
     }
-
 }

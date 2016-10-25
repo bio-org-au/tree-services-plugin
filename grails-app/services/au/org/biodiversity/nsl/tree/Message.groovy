@@ -103,7 +103,12 @@ class Message implements MessageSourceResolvable {
             }
 
             if (o instanceof Message) {
-                ((Message) o).buildNestedString(sb, depth + 1);
+                if(depth > 10) {
+                    sb.append("(Depth exceeded)");
+                }
+                else {
+                    ((Message) o).buildNestedString(sb, depth + 1);
+                }
             } else if (o instanceof ServiceException) {
                 sb.append(o.getClass().getSimpleName());
                 sb.append(": ");
