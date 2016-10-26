@@ -553,27 +553,16 @@ class UserWorkspaceManagerService {
         Message error = Message.makeMsg(Msg.removeNameFromTree, [name, ws]);
 
         try {
-            Collection<Node> currentNodeList = queryService.findCurrentNslName(ws, name);
-
-            if (currentNodeList.isEmpty()) {
-                error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]));
-                ServiceException.raise(error)
-            } else if (currentNodeList.size() > 1) {
-                error.nested.add(Message.makeMsg(Msg.THING_FOUND_IN_ARRANGEMENT_MULTIPLE_TIMES, [ws, name, "Name"]));
-                ServiceException.raise(error)
+            Link currentLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, name)
+            if(!currentLink) {
+                ServiceException.raise(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]))
             }
 
-            Node currentNode = currentNodeList.first();
-
-            if (!DomainUtils.getSubtaxaAsList().isEmpty()) {
-                error.nested.add(Message.makeMsg(Msg.NODE_HAS_SUBTAXA, [currentNode]));
-                ServiceException.raise(error)
-            }
-
-            Link currentLink = queryService.findNodeCurrentOrCheckedout(ws.node, currentNode)
+            Node currentNode = currentLink.supernode
 
             if (DomainUtils.isCheckedIn(currentLink.supernode)) {
                 currentNode = basicOperationsService.checkoutNode(ws.node, currentNode);
+                currentLink = DomainUtils.refetchLink(currentLink);
             }
 
             // it's a little tricky, but this does cover all possibilities.
@@ -586,6 +575,7 @@ class UserWorkspaceManagerService {
             }
         }
         catch (ServiceException ex) {
+            ex.printStackTrace();
             if(ex.msg == error)
                 throw ex;
             else {

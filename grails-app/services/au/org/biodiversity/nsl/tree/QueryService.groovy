@@ -536,6 +536,24 @@ and subnode.next is null
 ''', [arrangement: classification, nslInstance: nslInstance])
     }
 
+    Link findCurrentNslNameInTreeOrBaseTree(Arrangement tree, Name name) {
+        Link l
+
+        doWork sessionFactory_nsl, { Connection cnct ->
+            withQ cnct, "select find_name_in_tree(?, ?) as link_id", { PreparedStatement qry ->
+                qry.setLong(1, name.id)
+                qry.setLong(2, tree.id)
+                ResultSet rs = qry.executeQuery()
+                rs.next()
+                l = Link.get(rs.getLong('link_id'))
+                rs.close()
+            }
+        }
+
+        return l
+    }
+
+
     List findNamesInSubtree(Node node, String nameLike) {
         List l = [];
 
