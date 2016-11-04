@@ -26,6 +26,7 @@ public enum Msg {
 	NO_MESSAGE,
 	EMPTY,
 	TODO,
+	SIMPLE_2,
 
 	// BasicOperationsService
 	
@@ -109,6 +110,12 @@ public enum Msg {
 	placeNameOnTree,
 	removeNameFromTree,
 	NODE_HAS_SUBTAXA,
+	NAME_CANNOT_BE_PLACED_UNDER_NAME,
+	CANNOT_PLACE_NAME_UNDER_HIGHER_RANK,
+	HAS_SYNONYM_ALREADY_IN_TREE,
+	IS_SYNONYM_OF_ALREADY_IN_TREE,
+	HAS_SYNONYM_ALREADY_IN_TREE_item,
+	IS_SYNONYM_OF_ALREADY_IN_TREE_item,
 
 	this_is_just_an_end_stop;
 	

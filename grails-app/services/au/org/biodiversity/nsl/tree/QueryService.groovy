@@ -553,6 +553,96 @@ and subnode.next is null
         return l
     }
 
+    // this query returns the relationship instances where instance.hasSynonym foo
+    List<Instance> findSynonymsOfInstanceInTree(Arrangement tree, Instance instance) {
+        List<Instance> l = new ArrayList<Instance>();
+
+        doWork sessionFactory_nsl, { Connection cnct ->
+            withQ cnct, '''
+with recursive
+walk as (
+    select instance.id relationship_instance_id, tree_node.id node_id, tree_node.tree_arrangement_id
+    from instance
+    join tree_node on instance.cites_id = tree_node.instance_id
+    where instance.cited_by_id = ?
+    and tree_node.internal_type = 'T'
+    and tree_node.tree_arrangement_id in (?,?)
+    and tree_node.next_node_id is null
+    union all
+    select walk.relationship_instance_id, tree_node.id node_id, tree_node.tree_arrangement_id
+    from walk join tree_link on tree_link.subnode_id = walk.node_id
+    join tree_node on tree_link.supernode_id = tree_node.id
+    where tree_node.next_node_id is null
+    and tree_node.tree_arrangement_id in (?,?)
+    and walk.tree_arrangement_id <> ?
+)
+select distinct relationship_instance_id from walk where tree_arrangement_id = ?
+
+            ''', { PreparedStatement qry ->
+                qry.setLong(1, instance.id);
+                qry.setLong(2, tree.id);
+                qry.setLong(3, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(4, tree.id);
+                qry.setLong(5, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(6, tree.id);
+                qry.setLong(7, tree.id);
+
+
+                ResultSet rs = qry.executeQuery()
+                while(rs.next())
+                l.add(Instance.get(rs.getLong('relationship_instance_id')))
+                rs.close()
+            }
+        }
+
+        return l
+    }
+
+    List<Instance> findInstancesHavingSynonymInTree(Arrangement tree, Instance instance) {
+        List<Instance> l = new ArrayList<Instance>();
+
+        doWork sessionFactory_nsl, { Connection cnct ->
+            withQ cnct, '''
+with recursive
+walk as (
+    select instance.id as relationship_instance_id, tree_node.id node_id, tree_node.tree_arrangement_id
+    from instance
+    join tree_node on tree_node.instance_id = instance.cited_by_id
+    where instance.cites_id = ?
+    and tree_node.internal_type = 'T'
+    and tree_node.tree_arrangement_id in (?,?)
+    and tree_node.next_node_id is null
+    union all
+    select
+    walk.relationship_instance_id, tree_node.id node_id, tree_node.tree_arrangement_id
+    from walk join tree_link on tree_link.subnode_id = walk.node_id
+    join tree_node on tree_link.supernode_id = tree_node.id
+    where tree_node.next_node_id is null
+    and tree_node.tree_arrangement_id in (?,?)
+    and walk.tree_arrangement_id <> ?
+)
+select distinct relationship_instance_id from walk where tree_arrangement_id = ?
+
+            ''', { PreparedStatement qry ->
+                qry.setLong(1, instance.id);
+                qry.setLong(2, tree.id);
+                qry.setLong(3, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(4, tree.id);
+                qry.setLong(5, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(6, tree.id);
+                qry.setLong(7, tree.id);
+
+
+                ResultSet rs = qry.executeQuery()
+                while(rs.next())
+                    l.add(Instance.get(rs.getLong('relationship_instance_id')))
+                rs.close()
+            }
+        }
+
+        return l
+    }
+
 
     List findNamesInSubtree(Node node, String nameLike) {
         List l = [];

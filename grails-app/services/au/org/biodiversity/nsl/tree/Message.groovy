@@ -17,6 +17,7 @@
 package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.Arrangement
+import au.org.biodiversity.nsl.ArrangementType
 import au.org.biodiversity.nsl.Instance
 import au.org.biodiversity.nsl.Name
 import au.org.biodiversity.nsl.Reference
@@ -133,10 +134,16 @@ class Message implements MessageSourceResolvable {
     private static String prefTitle(Instance instance) {
         String p = instance.page ? " p. ${instance.page}" : '';
         String pq = instance.pageQualifier ? " [${instance.pageQualifier}]" : '';
-        return "${prefTitle(instance.name)} in ${prefTitle(instance.reference)}${p}${pq}";
+        return "${prefTitle(instance.name)} s. ${prefTitle(instance.reference)}${p}${pq}";
     }
 
     private static String prefTitle(Arrangement arrangement) {
+        switch(arrangement.arrangementType) {
+            case ArrangementType.U: return arrangement.title;
+            case ArrangementType.P: return arrangement.label;
+            default: "(${arrangement.arrangementType.name()}${arrangement.id})" // users should never see this
+        }
+
         arrangement.label ?: arrangement.arrangementType.uriId;
     }
 
@@ -160,6 +167,38 @@ class Message implements MessageSourceResolvable {
                 return "${prefTitle(it as Instance)}|${it.id}";
             } else if (it.hasProperty('id')) {
                 return "${it.getClass().getSimpleName()}|${it.id}";
+            } else {
+                return it;
+            }
+        }
+
+        return Holders.applicationContext.getMessage(
+                msg.getKey(),
+                args2.toArray(),
+                msg.getKey() + args2,
+                LocaleContextHolder.getLocale())
+    }
+
+    public String getHumanReadableMessage() {
+        // this does the job of deciding what our domain objects ought to look like when they appear in
+        def args2 = args.collect { Object it ->
+            if (it instanceof Message) {
+                // in general, the args of a message should not contain nested messages.
+                // Only nested messages ought to contain nested messages.
+                // If a message is created with an arg that is a message with nested messages,
+                // then the formatting (tabs and newlines) will be messed up.
+                Message message = it as Message;
+                return message.toString();
+            } else if (it instanceof Arrangement) {
+                return "${prefTitle((Arrangement) it)}";
+            } else if (it instanceof Name) {
+                return "${prefTitle(it as Name)}";
+            } else if (it instanceof Reference) {
+                return "${prefTitle(it as Reference)}";
+            } else if (it instanceof Instance) {
+                return "${prefTitle(it as Instance)}";
+            } else if (it.hasProperty('id')) {
+                return "${it.getClass().getSimpleName()}]${it.id}]";
             } else {
                 return it;
             }
