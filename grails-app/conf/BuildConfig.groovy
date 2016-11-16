@@ -33,7 +33,7 @@ grails.project.fork = [
 ]
 
 grails.project.dependency.resolver = "maven" // or ivy
-grails.project.repos.default = "anbg_releases"
+grails.project.repos.default = "anbg_snapshots"
 
 grails.project.dependency.resolution = {
     // inherit Grails' default dependencies
