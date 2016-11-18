@@ -187,6 +187,15 @@ class DomainUtils {
 		return u(n.typeUriNsPart, n.typeUriIdPart)
 	}
 
+	static Uri getNodeTypeUri(ValueNodeUri vnu) {
+		if(vnu == null) return null;
+		return u(vnu.nodeUriNsPart, vnu.nodeUriIdPart)
+	}
+
+	static Uri getLinkTypeUri(ValueNodeUri vnu) {
+		if(vnu == null) return null;
+		return u(vnu.linkUriNsPart, vnu.linkUriIdPart)
+	}
 
 	static boolean isBlankUri(UriNs nsPart, String idPart) {
 		return (nsPart == null || isBlank(nsPart)) && !idPart

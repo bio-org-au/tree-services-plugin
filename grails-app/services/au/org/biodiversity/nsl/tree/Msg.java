@@ -109,6 +109,7 @@ public enum Msg {
 
 	placeNameOnTree,
 	removeNameFromTree,
+	updateValue,
 	NODE_HAS_SUBTAXA,
 	NAME_CANNOT_BE_PLACED_UNDER_NAME,
 	CANNOT_PLACE_NAME_UNDER_HIGHER_RANK,

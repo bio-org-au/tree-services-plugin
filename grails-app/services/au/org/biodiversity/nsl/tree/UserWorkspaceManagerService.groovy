@@ -530,13 +530,12 @@ class UserWorkspaceManagerService {
     // these operations are the two operations required for the NSL-Editor. Yes, we are re-inventing the wheel here.
 
     String nn(Node n) {
-        if(n==null) return 'null';
+        if (n == null) return 'null';
         else return "${n.id} ${n.name?.simpleName} ${n.checkedInAt ? "" : " (DRAFT)"}"
     }
 
-    String ll(Link l)
-    {
-        if(l==null) return 'null';
+    String ll(Link l) {
+        if (l == null) return 'null';
         else return "${nn(l.supernode)} -> [${l.id}] -> ${nn(l.subnode)}"
     }
 
@@ -693,8 +692,7 @@ class UserWorkspaceManagerService {
                             log.debug("checking out new parent")
                             Node newNode = basicOperationsService.checkoutNode(ws.node, newParentLink.subnode);
                             newParentLink = DomainUtils.getDraftNodeSuperlink(newNode);
-                        }
-                        else {
+                        } else {
                             log.debug("new parent is already checked out")
                         }
 
@@ -702,8 +700,7 @@ class UserWorkspaceManagerService {
                             log.debug("checking out old parent")
                             Node newNode = basicOperationsService.checkoutNode(ws.node, currentLink.supernode);
                             currentLink = Link.findBySupernodeAndLinkSeq(newNode, currentLink.linkSeq);
-                        }
-                        else {
+                        } else {
                             log.debug("no old parent, or old parent is already checked out")
                         }
 
@@ -712,8 +709,7 @@ class UserWorkspaceManagerService {
                             Node newNode = basicOperationsService.checkoutNode(ws.node, currentLink.supernode);
                             currentLink = Link.findBySupernodeAndLinkSeq(newNode, currentLink.linkSeq);
                             log.debug("checking out old parent")
-                        }
-                        else {
+                        } else {
                             log.debug("no old parent, or old parent is already checked out")
                         }
 
@@ -721,8 +717,7 @@ class UserWorkspaceManagerService {
                             log.debug("checking out new parent")
                             Node newNode = basicOperationsService.checkoutNode(ws.node, newParentLink.subnode);
                             newParentLink = DomainUtils.getDraftNodeSuperlink(newNode);
-                        }
-                        else {
+                        } else {
                             log.debug("new parent is already checked out")
                         }
                     }
@@ -749,8 +744,7 @@ class UserWorkspaceManagerService {
                         basicOperationsService.simpleMoveDraftLink(currentLink, newParentLink.subnode);
                     }
                 }
-            }
-            else {
+            } else {
                 log.debug("node does not need to be moved")
             }
 
@@ -803,7 +797,8 @@ class UserWorkspaceManagerService {
         try {
             Link currentLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, name)
             if (!currentLink) {
-                ServiceException.raise(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]))
+                error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]));
+                ServiceException.raise(error);
             }
 
             Node currentNode = currentLink.supernode
@@ -832,5 +827,94 @@ class UserWorkspaceManagerService {
             }
         }
         return null;
+    }
+
+    Message updateValue(Arrangement ws, Name name, ValueNodeUri valueUri, String value) {
+        if (!ws) throw new IllegalArgumentException("null tree");
+        if (!name) throw new IllegalArgumentException("null name");
+        if (!valueUri) throw new IllegalArgumentException("null value uri");
+
+        if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
+        if (valueUri.isMultiValued) throw new IllegalArgumentException("${valueUri} is multivalued");
+
+        Message error = Message.makeMsg(Msg.updateValue, [valueUri.title, name, ws]);
+
+        try {
+            Link currentLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, name)
+            if (!currentLink) {
+                error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]));
+                ServiceException.raise(error);
+            }
+
+            Node currentNode = currentLink.subnode
+
+            // find existing value node
+
+            Link existingLink = Link.where {
+                supernode == currentNode &&
+                        typeUriNsPart == valueUri.linkUriNsPart &&
+                        typeUriIdPart == valueUri.linkUriIdPart &&
+                        subnode.internalType == NodeInternalType.V
+            }.first();
+
+            if (!existingLink && !value) return;
+            if (existingLink
+                    && existingLink.subnode.typeUriNsPart == valueUri.nodeUriNsPart
+                    && existingLink.subnode.typeUriIdPart == valueUri.nodeUriIdPart
+                    && existingLink.subnode.literal == value) {
+                return;
+            }
+
+
+            if (DomainUtils.isCheckedIn(currentNode)) {
+                currentNode = basicOperationsService.checkoutNode(ws.node, currentNode);
+                currentNode = DomainUtils.refetchNode(currentNode);
+            }
+
+            // ok! now use the basic opearions service to update/add values on the node
+
+            if (existingLink) {
+                basicOperationsService.deleteLink(currentNode, currentLink.linkSeq);
+                currentNode = DomainUtils.refetchNode(currentNode);
+            }
+
+            if (value) {
+                basicOperationsService.createDraftNode(currentNode, VersioningMethod.F, NodeInternalType.V,
+                        nodeType: DomainUtils.getNodeTypeUri(valueUri),
+                        linkType: DomainUtils.getLinkTypeUri(valueUri),
+                        literal: value
+                )
+            }
+
+        }
+        catch (ServiceException ex) {
+            ex.printStackTrace();
+            if (ex.msg == error)
+                throw ex;
+            else {
+                error.nested.add(ex.msg);
+                ServiceException.raise(error);
+            }
+        }
+        return null;
+    }
+
+    Message addMultiValue(Arrangement ws, Name name, ValueNodeUri valueUri, String value) {
+        if (!ws) throw new IllegalArgumentException("null tree");
+        if (!name) throw new IllegalArgumentException("null name");
+        if (!valueUri) throw new IllegalArgumentException("null value uri");
+        if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
+
+        if (!valueUri.isMultiValued) throw new IllegalArgumentException("${valueUri} is not multivalued");
+
+        ServiceException.raise(Message.makeMsg(Msg.TODO, ['Implement addMultiValue']))
+    }
+
+    Message removeMultiValue(Arrangement ws, Name name, int linkSeq) {
+        if (!ws) throw new IllegalArgumentException("null tree");
+        if (!name) throw new IllegalArgumentException("null name");
+        if (ws.arrangementType != ArrangementType.U) throw new IllegalArgumentException("ws is not a workspace");
+
+        ServiceException.raise(Message.makeMsg(Msg.TODO, ['Implement removeMultiValue']))
     }
 }
