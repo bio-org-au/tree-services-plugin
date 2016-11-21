@@ -12,9 +12,7 @@ import au.org.biodiversity.nsl.Node
 import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.Name
 import au.org.biodiversity.nsl.Instance
-import grails.converters.JSON
 import grails.transaction.Transactional
-import groovy.sql.Sql
 
 import javax.sql.DataSource
 
@@ -54,14 +52,14 @@ class UserWorkspaceManagerService {
 
     void deleteWorkspace(Arrangement arrangement) {
         if (!arrangement) throw new IllegalArgumentException("arrangement may not be null");
-        if (!arrangement.arrangementType == ArrangementType.U) throw new IllegalArgumentException("arrangement must be a workspace");
+        if (arrangement.arrangementType != ArrangementType.U) throw new IllegalArgumentException("arrangement must be a workspace");
         basicOperationsService.deleteArrangement(arrangement);
     }
 
 
     void updateWorkspace(Arrangement arrangement, boolean shared, String title, String description) {
         if (!arrangement) throw new IllegalArgumentException("arrangement may not be null");
-        if (!arrangement.arrangementType == ArrangementType.U) throw new IllegalArgumentException("arrangement must be a workspace");
+        if (arrangement.arrangementType != ArrangementType.U) throw new IllegalArgumentException("arrangement must be a workspace");
         basicOperationsService.updateWorkspace(arrangement, shared, title, description);
     }
 
@@ -739,7 +737,7 @@ class UserWorkspaceManagerService {
                     } else if (DomainUtils.isCheckedIn(currentLink.subnode)) {
                         log.debug("name is not checked out in the tree. Removing from old parent and adopting into the new one")
                         basicOperationsService.deleteLink(currentLink.supernode, currentLink.linkSeq);
-                        basicOperationsService.adoptNode(newParentLink.subnode, currentLink.subnode);
+                        basicOperationsService.adoptNode(newParentLink.subnode, currentLink.subnode, VersioningMethod.V);
                     } else {
                         log.debug("name checked out in the tree. Moving the draft node.")
                         basicOperationsService.simpleMoveDraftLink(currentLink, newParentLink.subnode);
@@ -767,7 +765,7 @@ class UserWorkspaceManagerService {
         }
     }
 
-    private void check_name_compatibility(List errors, Name supername, Name subname) {
+    private static void check_name_compatibility(List errors, Name supername, Name subname) {
         Name a = supername;
         Name b = subname;
 
@@ -849,14 +847,14 @@ class UserWorkspaceManagerService {
 
             Node currentNameNode = currentNameLink.subnode
 
-            // find existing value node
+            // find existing value node. There should only be one or none.
 
             Link currentValueLink = Link.where {
                 supernode == currentNameNode &&
                         typeUriNsPart == valueUri.linkUriNsPart &&
                         typeUriIdPart == valueUri.linkUriIdPart &&
                         subnode.internalType == NodeInternalType.V
-            }.first();
+            }.find()
 
             if (!currentValueLink && !value) return;
             if (currentValueLink
