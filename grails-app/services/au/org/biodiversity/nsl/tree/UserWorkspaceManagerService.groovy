@@ -12,6 +12,7 @@ import au.org.biodiversity.nsl.Node
 import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.Name
 import au.org.biodiversity.nsl.Instance
+import grails.converters.JSON
 import grails.transaction.Transactional
 import groovy.sql.Sql
 
@@ -840,50 +841,75 @@ class UserWorkspaceManagerService {
         Message error = Message.makeMsg(Msg.updateValue, [valueUri.title, name, ws]);
 
         try {
-            Link currentLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, name)
-            if (!currentLink) {
+            Link currentNameLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, name)
+            if (!currentNameLink) {
                 error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, name, "Name"]));
                 ServiceException.raise(error);
             }
 
-            Node currentNode = currentLink.subnode
+            Node currentNameNode = currentNameLink.subnode
 
             // find existing value node
 
-            Link existingLink = Link.where {
-                supernode == currentNode &&
+            Link currentValueLink = Link.where {
+                supernode == currentNameNode &&
                         typeUriNsPart == valueUri.linkUriNsPart &&
                         typeUriIdPart == valueUri.linkUriIdPart &&
                         subnode.internalType == NodeInternalType.V
             }.first();
 
-            if (!existingLink && !value) return;
-            if (existingLink
-                    && existingLink.subnode.typeUriNsPart == valueUri.nodeUriNsPart
-                    && existingLink.subnode.typeUriIdPart == valueUri.nodeUriIdPart
-                    && existingLink.subnode.literal == value) {
+            if (!currentValueLink && !value) return;
+            if (currentValueLink
+                    && currentValueLink.subnode.typeUriNsPart == valueUri.nodeUriNsPart
+                    && currentValueLink.subnode.typeUriIdPart == valueUri.nodeUriIdPart
+                    && currentValueLink.subnode.literal == value) {
                 return;
             }
 
-
-            if (DomainUtils.isCheckedIn(currentNode)) {
-                currentNode = basicOperationsService.checkoutNode(ws.node, currentNode);
-                currentNode = DomainUtils.refetchNode(currentNode);
+            if (DomainUtils.isCheckedIn(currentNameNode)) {
+                log.debug("checking out");
+                currentNameNode = basicOperationsService.checkoutNode(ws.node, currentNameNode);
+                currentNameNode = DomainUtils.refetchNode(currentNameNode);
+                if(currentValueLink != null) {
+                    currentValueLink = Link.findBySupernodeAndLinkSeq(currentNameNode, currentValueLink.linkSeq);
+                }
             }
 
             // ok! now use the basic opearions service to update/add values on the node
 
-            if (existingLink) {
-                basicOperationsService.deleteLink(currentNode, currentLink.linkSeq);
-                currentNode = DomainUtils.refetchNode(currentNode);
+            if(currentValueLink && !DomainUtils.isCheckedIn(currentValueLink.subnode)) {
+                // update the existing draft subnode
+                if(value) {
+                    basicOperationsService.updateDraftNode(currentValueLink.subnode,
+                            nodeType: DomainUtils.getNodeTypeUri(valueUri),
+                            literal: value
+                    );
+                    currentNameNode = DomainUtils.refetchNode(currentNameNode);
+                    basicOperationsService.updateDraftNodeLink(currentNameNode, currentValueLink.linkSeq, linkType: DomainUtils.getLinkTypeUri(valueUri));
+                }
+                else {
+                    basicOperationsService.deleteDraftNode(currentValueLink.subnode);
+                }
             }
+            else {
+                // unlink existing persistent subnode (if necessary),
+                // crate new draft subnode (if necesary)
+                if (currentValueLink) {
+                    log.debug("deleting ");
+                    basicOperationsService.deleteLink(currentNameNode, currentValueLink.linkSeq);
+                    currentNameNode = DomainUtils.refetchNode(currentNameNode);
+                    currentValueLink = null;
+                }
 
-            if (value) {
-                basicOperationsService.createDraftNode(currentNode, VersioningMethod.F, NodeInternalType.V,
-                        nodeType: DomainUtils.getNodeTypeUri(valueUri),
-                        linkType: DomainUtils.getLinkTypeUri(valueUri),
-                        literal: value
-                )
+
+                if (value) {
+                    log.debug("creating new value ");
+                    basicOperationsService.createDraftNode(currentNameNode, VersioningMethod.F, NodeInternalType.V,
+                            nodeType: DomainUtils.getNodeTypeUri(valueUri),
+                            linkType: DomainUtils.getLinkTypeUri(valueUri),
+                            literal: value
+                    )
+                }
             }
 
         }
