@@ -447,11 +447,15 @@ class DomainUtils {
         return o == null ? null : Name.get(o.id);
     }
 
-    static Instance refetchInstance(Instance o) {
-        return o == null ? null : Instance.get(o.id);
-    }
+	static Instance refetchInstance(Instance o) {
+		return o == null ? null : Instance.get(o.id);
+	}
 
-    static <K, V> Map<K, V> refetchMap(Map<K, V> o) {
+	static ValueNodeUri refetchValueNodeUri(ValueNodeUri o) {
+		return o == null ? null : ValueNodeUri.get(o.id);
+	}
+
+	static <K, V> Map<K, V> refetchMap(Map<K, V> o) {
 		if(o==null) return null;
 		Map<K, V> oo = [:];
 		o.each { k, v -> oo[refetchObject(k)] = refetchObject(v)}

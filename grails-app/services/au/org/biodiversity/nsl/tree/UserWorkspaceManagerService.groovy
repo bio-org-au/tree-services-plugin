@@ -902,6 +902,8 @@ class UserWorkspaceManagerService {
 
                 if (value) {
                     log.debug("creating new value ");
+                    currentNameNode = DomainUtils.refetchNode(currentNameNode);
+                    valueUri = DomainUtils.refetchValueNodeUri(valueUri);
                     basicOperationsService.createDraftNode(currentNameNode, VersioningMethod.F, NodeInternalType.V,
                             nodeType: DomainUtils.getNodeTypeUri(valueUri),
                             linkType: DomainUtils.getLinkTypeUri(valueUri),
@@ -909,7 +911,6 @@ class UserWorkspaceManagerService {
                     )
                 }
             }
-
         }
         catch (ServiceException ex) {
             ex.printStackTrace();
