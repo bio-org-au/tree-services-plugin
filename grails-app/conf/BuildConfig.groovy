@@ -33,29 +33,7 @@ grails.project.fork = [
 ]
 
 grails.project.dependency.resolver = "maven" // or ivy
-grails.project.repos.default = "snapshots"
-
-grails.project.repos.snapshots.url = "http://155.187.10.62:8081/nexus/content/repositories/snapshots/"
-grails.project.repos.snapshots.username = "nsldev"
-grails.project.repos.snapshots.password = "nsldev"
-
-grails.project.repos.releases.url = "http://155.187.10.62:8081/nexus/content/repositories/releases/"
-grails.project.repos.releases.username = "nsldev"
-grails.project.repos.releases.password = "nsldev"
-
-grails.project.ivy.authentication = {
-	repositories {
-        mavenLocal()
-		mavenRepo("http://155.187.10.62:8081/nexus/content/groups/public/") 
-	}
-
-    credentials {
-        realm = "Sonatype Nexus Repository Manager"
-        host = "155.187.10.62"
-        username = "nsldev"
-        password = "nsldev"
-    }
-}
+grails.project.repos.default = "anbg_snapshots"
 
 grails.project.dependency.resolution = {
     // inherit Grails' default dependencies
@@ -65,12 +43,15 @@ grails.project.dependency.resolution = {
     }
     log "warn" // log level of Ivy resolver, either 'error', 'warn', 'info', 'debug' or 'verbose'
     repositories {
-        mavenRepo("http://155.187.10.62:8081/nexus/content/groups/public/")
-        mavenRepo("http://155.187.10.62:8081/nexus/content/repositories/grails-plugins")
-		grailsHome()
+
         mavenLocal()
-		
+        mavenRepo(id: "anbg", url: "http://155.187.10.62:8081/nexus/content/groups/public/") {
+            updatePolicy "interval:1"
+        }
+        mavenRepo(id: "anbg", url: "http://155.187.10.62:8081/nexus/content/repositories/grails-plugins")
+        grailsHome()
     }
+
     dependencies {
         runtime 'org.postgresql:postgresql:9.3-1101-jdbc41'
         test "org.grails:grails-datastore-test-support:1.0-grails-2.4"
@@ -93,7 +74,7 @@ grails.project.dependency.resolution = {
             export = false
         }
 
-		compile ('au.org.biodiversity.grails.plugins:nsl-domain-plugin:1.2-SNAPSHOT'){
+		compile ('au.org.biodiversity.grails.plugins:nsl-domain-plugin:1.2'){
 			excludes "scaffolding"
 			excludes "cache"
 		}
