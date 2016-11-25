@@ -187,12 +187,12 @@ class DomainUtils {
 		return u(n.typeUriNsPart, n.typeUriIdPart)
 	}
 
-	static Uri getNodeTypeUri(ValueNodeUri vnu) {
+	static Uri getValueNodeTypeUri(ValueNodeUri vnu) {
 		if(vnu == null) return null;
 		return u(vnu.nodeUriNsPart, vnu.nodeUriIdPart)
 	}
 
-	static Uri getLinkTypeUri(ValueNodeUri vnu) {
+	static Uri getValueLinkTypeUri(ValueNodeUri vnu) {
 		if(vnu == null) return null;
 		return u(vnu.linkUriNsPart, vnu.linkUriIdPart)
 	}

@@ -879,11 +879,11 @@ class UserWorkspaceManagerService {
                 // update the existing draft subnode
                 if(value) {
                     basicOperationsService.updateDraftNode(currentValueLink.subnode,
-                            nodeType: DomainUtils.getNodeTypeUri(valueUri),
+                            nodeType: DomainUtils.getValueNodeTypeUri(valueUri),
                             literal: value
                     );
                     currentNameNode = DomainUtils.refetchNode(currentNameNode);
-                    basicOperationsService.updateDraftNodeLink(currentNameNode, currentValueLink.linkSeq, linkType: DomainUtils.getLinkTypeUri(valueUri));
+                    basicOperationsService.updateDraftNodeLink(currentNameNode, currentValueLink.linkSeq, linkType: DomainUtils.getValueLinkTypeUri(valueUri));
                 }
                 else {
                     basicOperationsService.deleteDraftNode(currentValueLink.subnode);
@@ -905,8 +905,8 @@ class UserWorkspaceManagerService {
                     currentNameNode = DomainUtils.refetchNode(currentNameNode);
                     valueUri = DomainUtils.refetchValueNodeUri(valueUri);
                     basicOperationsService.createDraftNode(currentNameNode, VersioningMethod.F, NodeInternalType.V,
-                            nodeType: DomainUtils.getNodeTypeUri(valueUri),
-                            linkType: DomainUtils.getLinkTypeUri(valueUri),
+                            nodeType: DomainUtils.getValueNodeTypeUri(valueUri),
+                            linkType: DomainUtils.getValueLinkTypeUri(valueUri),
                             literal: value
                     )
                 }
