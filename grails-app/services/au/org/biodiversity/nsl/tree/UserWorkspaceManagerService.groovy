@@ -651,97 +651,97 @@ class UserWorkspaceManagerService {
                 } else {
                     log.debug("the node does not need to be edited")
                 }
+            }
 
-                // at this point, the tree may have been disturbed and we need to re-fetch things - copy/paste the code. Note that at this stage
-                // the current node may or may not be a draft node
+            // at this point, the tree may have been disturbed and we need to re-fetch things - copy/paste the code. Note that at this stage
+            // the current node may or may not be a draft node
 
-                if (parentName != null) {
-                    newParentLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, parentName)
-                    if (newParentLink == null) {
-                        error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, parentName, 'Name']))
+            if (parentName != null) {
+                newParentLink = queryService.findCurrentNslNameInTreeOrBaseTree(ws, parentName)
+                if (newParentLink == null) {
+                    error.nested.add(Message.makeMsg(Msg.THING_NOT_FOUND_IN_ARRANGEMENT, [ws, parentName, 'Name']))
+                }
+            } else {
+                newParentLink = DomainUtils.getSingleSublink(ws.node);
+                if (newParentLink.typeUriIdPart != 'workspace_top_node') throw new IllegalStateException(newParentLink.typeUriIdPart);
+            }
+
+
+            log.debug("current link is now ${ll(currentLink)}")
+            log.debug("link to the new parent is now ${ll(newParentLink)}")
+
+            // next - the placement. If there is going to be a move, then the node's current parent must be checked out
+            // and the destination parent must be checked out.
+
+            // do we need to move at all?
+
+            if (currentLink == null || currentLink.supernode != newParentLink.subnode) {
+                log.debug("the node needs to be moved")
+
+                // both the current and new parent need to be checked out, which they either or both may already be. If
+                // both of them need checking out, AND one of them is below the other, THEN the sequence becomes very critical.
+                // we check out the 'higher' one first and then the lower one, because checking out the lower one will
+                // also check out the higher one which will cause our reference to that higher one to get lost
+
+                if (currentLink != null && DomainUtils.isCheckedIn(currentLink.supernode) && DomainUtils.isCheckedIn(newParentLink.subnode)
+                        && queryService.countPaths(newParentLink.subnode, currentLink.supernode) != 0) {
+                    log.debug("both the current parent and the new parent may need to be checked out, in reverse order")
+                    // the new parent is above the old parent, so we must check out the new parent first
+
+                    if (DomainUtils.isCheckedIn(newParentLink.subnode)) {
+                        log.debug("checking out new parent")
+                        Node newNode = basicOperationsService.checkoutNode(ws.node, newParentLink.subnode);
+                        newParentLink = DomainUtils.getDraftNodeSuperlink(newNode);
+                    } else {
+                        log.debug("new parent is already checked out")
                     }
+
+                    if (currentLink != null && DomainUtils.isCheckedIn(currentLink.supernode)) {
+                        log.debug("checking out old parent")
+                        Node newNode = basicOperationsService.checkoutNode(ws.node, currentLink.supernode);
+                        currentLink = Link.findBySupernodeAndLinkSeq(newNode, currentLink.linkSeq);
+                    } else {
+                        log.debug("no old parent, or old parent is already checked out")
+                    }
+
                 } else {
-                    newParentLink = DomainUtils.getSingleSublink(ws.node);
-                    if (newParentLink.typeUriIdPart != 'workspace_top_node') throw new IllegalStateException(newParentLink.typeUriIdPart);
+                    if (currentLink != null && DomainUtils.isCheckedIn(currentLink.supernode)) {
+                        Node newNode = basicOperationsService.checkoutNode(ws.node, currentLink.supernode);
+                        currentLink = Link.findBySupernodeAndLinkSeq(newNode, currentLink.linkSeq);
+                        log.debug("checking out old parent")
+                    } else {
+                        log.debug("no old parent, or old parent is already checked out")
+                    }
+
+                    if (DomainUtils.isCheckedIn(newParentLink.subnode)) {
+                        log.debug("checking out new parent")
+                        Node newNode = basicOperationsService.checkoutNode(ws.node, newParentLink.subnode);
+                        newParentLink = DomainUtils.getDraftNodeSuperlink(newNode);
+                    } else {
+                        log.debug("new parent is already checked out")
+                    }
                 }
 
+                // once the node's current parent and destination parent are both checked out, then the node is moved either as
+                // a draft node move or as an un-adopt/adopt sequence. Oh - or we have to create it, duh.
 
-                log.debug("current link is now ${ll(currentLink)}")
-                log.debug("link to the new parent is now ${ll(newParentLink)}")
+                currentLink = DomainUtils.refetchLink(currentLink)
+                newParentLink = DomainUtils.refetchLink(newParentLink)
 
-                // next - the placement. If there is going to be a move, then the node's current parent must be checked out
-                // and the destination parent must be checked out.
+                log.debug("currentLink ${ll(currentLink)}")
+                log.debug("newParentLink ${ll(newParentLink)}")
 
-                // do we need to move at all?
-
-                if (currentLink == null || currentLink.supernode != newParentLink.subnode) {
-                    log.debug("the node needs to be moved")
-
-                    // both the current and new parent need to be checked out, which they either or both may already be. If
-                    // both of them need checking out, AND one of them is below the other, THEN the sequence becomes very critical.
-                    // we check out the 'higher' one first and then the lower one, because checking out the lower one will
-                    // also check out the higher one which will cause our reference to that higher one to get lost
-
-                    if (currentLink != null && DomainUtils.isCheckedIn(currentLink.supernode) && DomainUtils.isCheckedIn(newParentLink.subnode)
-                            && queryService.countPaths(newParentLink.subnode, currentLink.supernode) != 0) {
-                        log.debug("both the current parent and the new parent may need to be checked out, in reverse order")
-                        // the new parent is above the old parent, so we must check out the new parent first
-
-                        if (DomainUtils.isCheckedIn(newParentLink.subnode)) {
-                            log.debug("checking out new parent")
-                            Node newNode = basicOperationsService.checkoutNode(ws.node, newParentLink.subnode);
-                            newParentLink = DomainUtils.getDraftNodeSuperlink(newNode);
-                        } else {
-                            log.debug("new parent is already checked out")
-                        }
-
-                        if (currentLink != null && DomainUtils.isCheckedIn(currentLink.supernode)) {
-                            log.debug("checking out old parent")
-                            Node newNode = basicOperationsService.checkoutNode(ws.node, currentLink.supernode);
-                            currentLink = Link.findBySupernodeAndLinkSeq(newNode, currentLink.linkSeq);
-                        } else {
-                            log.debug("no old parent, or old parent is already checked out")
-                        }
-
-                    } else {
-                        if (currentLink != null && DomainUtils.isCheckedIn(currentLink.supernode)) {
-                            Node newNode = basicOperationsService.checkoutNode(ws.node, currentLink.supernode);
-                            currentLink = Link.findBySupernodeAndLinkSeq(newNode, currentLink.linkSeq);
-                            log.debug("checking out old parent")
-                        } else {
-                            log.debug("no old parent, or old parent is already checked out")
-                        }
-
-                        if (DomainUtils.isCheckedIn(newParentLink.subnode)) {
-                            log.debug("checking out new parent")
-                            Node newNode = basicOperationsService.checkoutNode(ws.node, newParentLink.subnode);
-                            newParentLink = DomainUtils.getDraftNodeSuperlink(newNode);
-                        } else {
-                            log.debug("new parent is already checked out")
-                        }
-                    }
-
-                    // once the node's current parent and destination parent are both checked out, then the node is moved either as
-                    // a draft node move or as an un-adopt/adopt sequence. Oh - or we have to create it, duh.
-
-                    currentLink = DomainUtils.refetchLink(currentLink)
-                    newParentLink = DomainUtils.refetchLink(newParentLink)
-
-                    log.debug("currentLink ${ll(currentLink)}")
-                    log.debug("newParentLink ${ll(newParentLink)}")
-
-                    if (currentLink == null) {
-                        log.debug("name is not in the tree. creating a new draft node")
-                        basicOperationsService.createDraftNode(newParentLink.supernode, VersioningMethod.V, NodeInternalType.T,
-                                nslName: name, nslInstance: instance, nodeType: placementType)
-                    } else if (DomainUtils.isCheckedIn(currentLink.subnode)) {
-                        log.debug("name is not checked out in the tree. Removing from old parent and adopting into the new one")
-                        basicOperationsService.deleteLink(currentLink.supernode, currentLink.linkSeq);
-                        basicOperationsService.adoptNode(newParentLink.subnode, currentLink.subnode, VersioningMethod.V);
-                    } else {
-                        log.debug("name checked out in the tree. Moving the draft node.")
-                        basicOperationsService.simpleMoveDraftLink(currentLink, newParentLink.subnode);
-                    }
+                if (currentLink == null) {
+                    log.debug("name is not in the tree. creating a new draft node")
+                    basicOperationsService.createDraftNode(newParentLink.supernode, VersioningMethod.V, NodeInternalType.T,
+                            nslName: name, nslInstance: instance, nodeType: placementType)
+                } else if (DomainUtils.isCheckedIn(currentLink.subnode)) {
+                    log.debug("name is not checked out in the tree. Removing from old parent and adopting into the new one")
+                    basicOperationsService.deleteLink(currentLink.supernode, currentLink.linkSeq);
+                    basicOperationsService.adoptNode(newParentLink.subnode, currentLink.subnode, VersioningMethod.V);
+                } else {
+                    log.debug("name checked out in the tree. Moving the draft node.")
+                    basicOperationsService.simpleMoveDraftLink(currentLink, newParentLink.subnode);
                 }
             } else {
                 log.debug("node does not need to be moved")
