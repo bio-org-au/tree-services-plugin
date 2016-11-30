@@ -15,6 +15,7 @@ import au.org.biodiversity.nsl.Instance
 import grails.transaction.Transactional
 
 import javax.sql.DataSource
+import javax.xml.ws.Service
 
 @Transactional(rollbackFor = [ServiceException])
 class UserWorkspaceManagerService {
@@ -503,6 +504,12 @@ class UserWorkspaceManagerService {
         if (!node.prev) throw new IllegalArgumentException("node not a checkout");
         if (node.prev.replacedAt) throw new IllegalArgumentException("target checkin is already replaced");
 
+        // ok. checks go here.
+
+        // *if* this node were checked in, would that result in a duplicate name in the tree?
+
+        // *if* this node were checked in, would that result in a duplicate name in the tree synonyms?
+
         Event e = basicOperationsService.newEvent(node.namespace(), "checkin of ${node}")
         node = DomainUtils.refetchNode(node);
         basicOperationsService.createCopiesOfAllNonTreeNodes(e, node);
@@ -517,6 +524,8 @@ class UserWorkspaceManagerService {
 
         // I am not going to attempt to display what has been changed.
         // The client is just going to have to refresh everything.
+
+        if(true) ServiceException.raise(Message.makeMsg(Msg.TODO, 'Checkin integrity checks.'));
 
         return [
                 target  : node,
