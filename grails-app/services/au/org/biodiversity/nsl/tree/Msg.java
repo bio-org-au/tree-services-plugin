@@ -110,6 +110,7 @@ public enum Msg {
 	placeNameOnTree,
 	removeNameFromTree,
 	updateValue,
+	performCheckin,
 	NODE_HAS_SUBTAXA,
 	NAME_CANNOT_BE_PLACED_UNDER_NAME,
 	CANNOT_PLACE_NAME_UNDER_HIGHER_RANK,
@@ -117,6 +118,7 @@ public enum Msg {
 	IS_SYNONYM_OF_ALREADY_IN_TREE,
 	HAS_SYNONYM_ALREADY_IN_TREE_item,
 	IS_SYNONYM_OF_ALREADY_IN_TREE_item,
+	NAME_PLACED_ELSEWHERE_IN_BASE_TREE,
 
 	this_is_just_an_end_stop;
 	

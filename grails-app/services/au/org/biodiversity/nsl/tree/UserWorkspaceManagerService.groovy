@@ -13,9 +13,16 @@ import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.Name
 import au.org.biodiversity.nsl.Instance
 import grails.transaction.Transactional
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+import org.hibernate.jdbc.Work
 
 import javax.sql.DataSource
 import javax.xml.ws.Service
+import java.sql.Connection
+import java.sql.PreparedStatement
+import java.sql.ResultSet
+import java.sql.SQLException
 
 @Transactional(rollbackFor = [ServiceException])
 class UserWorkspaceManagerService {
@@ -24,6 +31,7 @@ class UserWorkspaceManagerService {
     BasicOperationsService basicOperationsService;
     VersioningService versioningService;
     DataSource dataSource_nsl;
+    SessionFactory sessionFactory_nsl
 
 
     Arrangement createWorkspace(Namespace namespace, Arrangement baseTree, String owner, boolean shared, String title, String description) {
@@ -504,11 +512,7 @@ class UserWorkspaceManagerService {
         if (!node.prev) throw new IllegalArgumentException("node not a checkout");
         if (node.prev.replacedAt) throw new IllegalArgumentException("target checkin is already replaced");
 
-        // ok. checks go here.
-
-        // *if* this node were checked in, would that result in a duplicate name in the tree?
-
-        // *if* this node were checked in, would that result in a duplicate name in the tree synonyms?
+        performCheckinChecks(node)
 
         Event e = basicOperationsService.newEvent(node.namespace(), "checkin of ${node}")
         node = DomainUtils.refetchNode(node);
@@ -532,6 +536,100 @@ class UserWorkspaceManagerService {
                 modified: [node]
         ]
 
+    }
+
+
+    def performCheckinChecks(Node node) throws ServiceException {
+        // ok. checks go here.
+
+        // *if* this node were checked in, would that result in a duplicate name in the tree?
+
+        // *if* this node were checked in, would that result in a duplicate name in the tree synonyms?
+
+        log.debug "ABOUT TO CHECKIN ${node} ${node.name}"
+        log.debug "WHICH WILL REPLACE ${node.prev} ${node.prev.name}"
+
+
+        Message msg = Message.makeMsg(Msg.performCheckin, [node, node.name])
+
+        sessionFactory_nsl.getCurrentSession().doWork(new Work() {
+
+
+            void execute(Connection connection) throws SQLException {
+
+                // OK!
+                String sql = '''
+-- ABOUT TO CHECKIN au.org.biodiversity.nsl.Node : 8023459
+-- WHICH WILL REPLACE au.org.biodiversity.nsl.Node : 2897258
+
+with recursive
+nodes_being_checked_in as (
+    select cast(null as bigint) supernode_id, cast(? as bigint) as node_id
+union all
+    select tree_link.supernode_id, tree_link.subnode_id as node_id
+    from nodes_being_checked_in
+      join tree_link on nodes_being_checked_in.node_id = tree_link.supernode_id
+        join tree_node subnode on tree_link.subnode_id = subnode.id
+    where subnode.internal_type <> 'V'
+),
+links_being_replaced as (
+    select tree_link.id as link_id, tree_link.supernode_id, tree_link.subnode_id from
+    tree_link
+    where
+      tree_link.supernode_id = ?
+      and tree_link.subnode_id <> ? -- clip search
+union all
+    select tree_link.id as link_id, tree_link.supernode_id, tree_link.subnode_id from
+    links_being_replaced join tree_link on links_being_replaced.subnode_id = tree_link.supernode_id
+    join tree_node subnode on tree_link.subnode_id = subnode.id
+    where tree_link.subnode_id <> ? -- clip search
+    and subnode.internal_type <> 'V'
+),
+problems as (
+SELECT
+  nodes_being_checked_in.supernode_id AS checkin_supernode_id,
+  nodes_being_checked_in.node_id AS checkin_node_id,
+  links_being_replaced.link_id AS being_enddated_link_id
+FROM
+nodes_being_checked_in
+  JOIN tree_node checkin_node ON nodes_being_checked_in.node_id = checkin_node.id,
+links_being_replaced
+  JOIN tree_node replaced_node ON links_being_replaced.subnode_id = replaced_node.id
+WHERE checkin_node.name_id = replaced_node.name_id
+)
+select problems.* from problems
+left outer join problems as sup on problems.checkin_supernode_id = sup.checkin_node_id
+where sup.checkin_node_id is null
+				'''
+
+                PreparedStatement stmt = connection.prepareStatement(sql)
+
+                log.debug("nodes being checked in are the tree from ${node}")
+                log.debug("nodes being replaced are the tree from ${node.prev.root.node}")
+                log.debug("nodes being replaced will be clipped at  ${node.prev}")
+
+                stmt.setLong(1, node.id);
+                stmt.setLong(2, node.prev.root.node.id);
+                stmt.setLong(3, node.prev.id);
+                stmt.setLong(4, node.prev.id);
+
+                ResultSet rs = stmt.executeQuery()
+                while(rs.next()) {
+                    Node checkin_supernode = Node.get(rs.getInt('checkin_supernode_id'))
+                    Node n = Node.get(rs.getInt('checkin_node_id'))
+                    Link l = Link.get(rs.getInt('being_enddated_link_id'))
+                    Message submsg = Message.makeMsg(Msg.NAME_PLACED_ELSEWHERE_IN_BASE_TREE, [n.name, l.supernode.name, l.subnode.root.label, node.name, node.root.title])
+                    msg.nested.add(submsg)
+
+                    log.debug "CONFLICT - node ${n} with name ${n.name} and supernode ${checkin_supernode} has the same name as the subnode of link ${l} nodes ${l.supernode}->${l.subnode} names ${l.supernode.name}->${l.subnode.name} "
+                }
+
+            }
+        })
+
+        msg.nested.add(Message.makeMsg(Msg.TODO, ['implement performCheckinChecks']))
+
+        if(!msg.nested.empty) ServiceException.raise(msg)
     }
 
     ////////////////////////////////////////////
