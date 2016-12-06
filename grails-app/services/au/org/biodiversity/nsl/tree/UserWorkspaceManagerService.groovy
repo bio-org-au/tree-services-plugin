@@ -553,9 +553,9 @@ class UserWorkspaceManagerService {
 
 
             void execute(Connection connection) throws SQLException {
-
-                // OK!
-                String sql = '''
+                if (true) {
+                    // Check for duplicate names
+                    String sql = '''
 -- ABOUT TO CHECKIN au.org.biodiversity.nsl.Node : 8023459
 -- WHICH WILL REPLACE au.org.biodiversity.nsl.Node : 2897258
 
@@ -599,29 +599,93 @@ LEFT OUTER JOIN problems AS sup ON problems.checkin_supernode_id = sup.checkin_n
 WHERE sup.checkin_node_id IS NULL
 				'''
 
-                PreparedStatement stmt = connection.prepareStatement(sql)
+                    PreparedStatement stmt = connection.prepareStatement(sql)
 
-                log.debug("nodes being checked in are the tree from ${node}")
-                log.debug("nodes being replaced are the tree from ${node.prev.root.node}")
-                log.debug("nodes being replaced will be clipped at  ${node.prev}")
+                    log.debug("nodes being checked in are the tree from ${node}")
+                    log.debug("nodes being replaced are the tree from ${node.prev.root.node}")
+                    log.debug("nodes being replaced will be clipped at  ${node.prev}")
 
-                stmt.setLong(1, node.id);
-                stmt.setLong(2, node.prev.root.node.id);
-                stmt.setLong(3, node.prev.id);
-                stmt.setLong(4, node.prev.id);
+                    stmt.setLong(1, node.id);
+                    stmt.setLong(2, node.prev.root.node.id);
+                    stmt.setLong(3, node.prev.id);
+                    stmt.setLong(4, node.prev.id);
 
-                ResultSet rs = stmt.executeQuery()
-                while (rs.next()) {
-                    Node checkin_supernode = Node.get(rs.getInt('checkin_supernode_id'))
-                    Node n = Node.get(rs.getInt('checkin_node_id'))
-                    Link l = Link.get(rs.getInt('being_enddated_link_id'))
-                    Message submsg = Message.makeMsg(Msg.NAME_PLACED_ELSEWHERE_IN_BASE_TREE, [n.name, l.supernode.name, l.subnode.root.label, node.name, node.root.title])
-                    messages.add(submsg)
+                    ResultSet rs = stmt.executeQuery()
+                    while (rs.next()) {
+                        Node checkin_supernode = Node.get(rs.getInt('checkin_supernode_id'))
+                        Node n = Node.get(rs.getInt('checkin_node_id'))
+                        Link l = Link.get(rs.getInt('being_enddated_link_id'))
+                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+Checking in ${node.name.simpleName} from "${node.root.title}"
+into ${node.prev.root.label}
+will result in a duplicate placement of ${n.name.simpleName}, which is currently placed in ${node.prev.root.label}.
+""")
 
-                    log.debug "CONFLICT - node ${n} with name ${n.name} and supernode ${checkin_supernode} has the same name as the subnode of link ${l} nodes ${l.supernode}->${l.subnode} names ${l.supernode.name}->${l.subnode.name} "
+                        messages.add(submsg)
+
+                        log.debug "CONFLICT - node ${n} with name ${n.name} and supernode ${checkin_supernode} has the same name as the subnode of link ${l} nodes ${l.supernode}->${l.subnode} names ${l.supernode.name}->${l.subnode.name} "
+                    }
                 }
+                if (true) {
+                    // check for diamonds
+                    String sql = '''
+-- ABOUT TO CHECKIN au.org.biodiversity.nsl.Node : 8023459
+-- WHICH WILL REPLACE au.org.biodiversity.nsl.Node : 2897258
 
-            }
+with recursive
+nodes_being_checked_in as (
+    select cast(null as bigint) supernode_id, cast(? as bigint) as node_id
+union all
+    select tree_link.supernode_id, tree_link.subnode_id as node_id
+    from nodes_being_checked_in
+      join tree_link on nodes_being_checked_in.node_id = tree_link.supernode_id
+        join tree_node subnode on tree_link.subnode_id = subnode.id
+    where subnode.internal_type <> 'V\'
+),
+problems as (
+SELECT
+    node_id
+FROM
+nodes_being_checked_in
+    group by node_id
+    having count(*) > 1
+),
+distinct_supers as (
+    select distinct *
+    from nodes_being_checked_in
+    where node_id in (select node_id from problems)
+),
+one_distinct_super as (
+    select node_id, max(supernode_id) as supernode_id
+    from distinct_supers
+    group by node_id
+    having count(*) = 1
+),
+one_distinct_problem_super as (
+    select * from one_distinct_super
+    where supernode_id in (select node_id from problems)
+)
+select * from problems
+where node_id not in (select node_id from one_distinct_problem_super)
+
+				'''
+
+                    PreparedStatement stmt = connection.prepareStatement(sql)
+
+                    stmt.setLong(1, node.id);
+
+                    ResultSet rs = stmt.executeQuery()
+                    while (rs.next()) {
+                        Node n = Node.get(rs.getInt('node_id'))
+                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+${node.name.simpleName} from "${node.root.title}"
+contains a node ${n.name.simpleName}
+which is attached in multiple places (graph diamond).
+""")
+
+                        messages.add(submsg)
+                    }
+                }            }
         })
 
         return messages;
@@ -706,7 +770,7 @@ SELECT problems.* FROM problems
                     being checked in. This instance has a ${checkin_synonym.instanceType.hasLabel} ${
                             checkin_synonym.name.simpleName
                         },
-                    which is already placed in ${node.prev.root.label} under ${replaced_link.supernode.name.simpleName}.
+                    which is already placed in ${node.prev.root.label}.
 """])
                         messages.add(submsg)
                     }
@@ -739,19 +803,19 @@ UNION ALL
     WHERE tree_link.subnode_id <> ? -- clip search
     AND subnode.internal_type <> 'V'
 ),
-problems as (
+problems AS (
 SELECT
   nodes_being_checked_in.supernode_id AS checkin_supernode_id,
   nodes_being_checked_in.node_id AS checkin_node_id,
   links_being_replaced.link_id AS being_enddated_link_id,
-  replaced_synonym.id as replaced_synonym_id
+  replaced_synonym.id AS replaced_synonym_id
 FROM
 nodes_being_checked_in
   JOIN tree_node checkin_node ON nodes_being_checked_in.node_id = checkin_node.id
     ,
 links_being_replaced
   JOIN tree_node replaced_node ON links_being_replaced.subnode_id = replaced_node.id
-    JOIN instance replaced_synonym on replaced_node.instance_id = replaced_synonym.cited_by_id
+    JOIN instance replaced_synonym ON replaced_node.instance_id = replaced_synonym.cited_by_id
 WHERE replaced_synonym.name_id = checkin_node.name_id
 )
 SELECT problems.* FROM problems
@@ -783,7 +847,7 @@ SELECT problems.* FROM problems
                     being checked in. This name is ${replaced_synonym.instanceType.ofLabel} ${
                             replaced_link.subnode.name.simpleName
                         } in ${replaced_synonym.reference.citation},
-                    which is already placed in ${node.prev.root.label} under ${replaced_link.supernode.name.simpleName}.
+                    which is already placed in ${node.prev.root.label}.
 """])
                         messages.add(submsg)
                     }
