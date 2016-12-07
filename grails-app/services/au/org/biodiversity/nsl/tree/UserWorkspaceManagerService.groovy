@@ -564,7 +564,7 @@ UNION ALL
     FROM nodes_being_checked_in
       JOIN tree_link ON nodes_being_checked_in.node_id = tree_link.supernode_id
         JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
-    WHERE subnode.internal_type <> 'V\'
+    WHERE subnode.internal_type <> 'V'
 ),
 problems AS (
 SELECT
@@ -623,7 +623,7 @@ union all
     from nodes_being_checked_in
       join tree_link on nodes_being_checked_in.node_id = tree_link.supernode_id
         join tree_node subnode on tree_link.subnode_id = subnode.id
-    where subnode.internal_type <> 'V\'
+    where subnode.internal_type <> 'V'
 ),
 problems as (
 SELECT
@@ -751,7 +751,7 @@ union all
     from nodes_being_checked_in
       join tree_link on nodes_being_checked_in.node_id = tree_link.supernode_id
         join tree_node subnode on tree_link.subnode_id = subnode.id
-    where subnode.internal_type <> 'V\'
+    where subnode.internal_type <> 'V'
 ),
 problems as (
 SELECT
@@ -759,11 +759,14 @@ SELECT
     from
     nodes_being_checked_in a
     join tree_node a_node on a.node_id = a_node.id
-    join instance a_synonym on a_node.instance_id = a_synonym.cited_by_id,
+    join instance a_synonym on a_node.instance_id = a_synonym.cited_by_id
+    join instance_type on a_synonym.instance_type_id = instance_type.id,
     nodes_being_checked_in b
     join tree_node b_node on b.node_id = b_node.id
     where a_synonym.name_id = b_node.name_id
     and a.node_id <> b.node_id
+    and not instance_type.misapplied
+    and not instance_type.pro_parte
 )
 select * from problems
 				'''
@@ -780,7 +783,7 @@ select * from problems
                         Message submsg = Message.makeMsg(Msg.EMPTY, ["""
 ${a_node.name.simpleName} in ${a_node.instance.reference.citation}
 has a ${a_synonym.instanceType.hasLabel} ${a_synonym.name.simpleName}
-which appears elsewhere in the checkin.
+which appears elsewhere in the check-in.
 """])
                         messages.add(submsg)
                     }
@@ -824,10 +827,13 @@ nodes_being_checked_in
   JOIN tree_node checkin_node ON nodes_being_checked_in.node_id = checkin_node.id
   --JOIN INSTANCE checkin_instance on checkin_node.instance_id = checkin_instance.id -- dont need this
   JOIN INSTANCE checkin_synonym ON checkin_node.instance_id = checkin_synonym.CITED_BY_ID
+  join instance_type on checkin_synonym.instance_type_id = instance_type.id
     ,
 links_being_replaced
   JOIN tree_node replaced_node ON links_being_replaced.subnode_id = replaced_node.id
 WHERE checkin_synonym.name_id = replaced_node.name_id
+    and not instance_type.misapplied
+    and not instance_type.pro_parte
 )
 SELECT problems.* FROM problems
 -- we do all synonymy issues, not just the top level
@@ -903,7 +909,10 @@ nodes_being_checked_in
 links_being_replaced
   JOIN tree_node replaced_node ON links_being_replaced.subnode_id = replaced_node.id
     JOIN instance replaced_synonym ON replaced_node.instance_id = replaced_synonym.cited_by_id
+  join instance_type on replaced_synonym.instance_type_id = instance_type.id
 WHERE replaced_synonym.name_id = checkin_node.name_id
+    and not instance_type.misapplied
+    and not instance_type.pro_parte
 )
 SELECT problems.* FROM problems
 -- we do all synonymy issues, not just the top level
