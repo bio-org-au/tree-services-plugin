@@ -551,8 +551,54 @@ class UserWorkspaceManagerService {
 
         sessionFactory_nsl.getCurrentSession().doWork(new Work() {
 
-
             void execute(Connection connection) throws SQLException {
+                if (true) {
+                    // check for name rank issues
+                    String sql = '''
+WITH RECURSIVE
+links_being_checked_in AS (
+    SELECT tree_link.id link_id, tree_link.supernode_id, tree_link.subnode_id
+    FROM tree_link
+      JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
+    WHERE
+      tree_link.supernode_id = ?
+      AND subnode.internal_type <> 'V'
+UNION ALL
+    SELECT tree_link.id link_id, tree_link.supernode_id, tree_link.subnode_id
+    FROM links_being_checked_in
+      JOIN tree_link ON links_being_checked_in.subnode_id = tree_link.supernode_id
+      JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
+    WHERE subnode.internal_type <> 'V'
+)SELECT
+    l.link_id
+FROM
+  links_being_checked_in l
+  JOIN tree_node supernode ON l.supernode_id = supernode.id
+  JOIN name supername ON supernode.name_id = supername.id
+  JOIN name_rank superrank ON supername.name_rank_id = superrank.id
+  JOIN tree_node subnode ON l.subnode_id = subnode.id
+  JOIN name subname ON subnode.name_id = subname.id
+  JOIN name_rank subrank ON subname.name_rank_id = subrank.id
+WHERE superrank.sort_order > subrank.sort_order
+				'''
+
+                    PreparedStatement stmt = connection.prepareStatement(sql)
+
+                    stmt.setLong(1, node.id);
+
+                    ResultSet rs = stmt.executeQuery()
+                    while (rs.next()) {
+                        Link l = Link.get(rs.getInt('link_id'))
+                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+${l.subnode.name.simpleName} with rank ${l.subnode.name.nameRank.name}
+is placed under
+${l.supernode.name.simpleName} with rank ${l.supernode.name.nameRank.name}
+.
+""")
+                        messages.add(submsg)
+                    }
+                }
+
                 if (true) {
                     // check for diamonds
                     String sql = '''
@@ -615,27 +661,27 @@ which is attached in multiple places (graph diamond).
                     // Check for duplicate names inside the checkin
 
                     String sql = '''
-with recursive
-nodes_being_checked_in as (
-    select cast(null as bigint) supernode_id, cast(? as bigint) as node_id
-union all
-    select tree_link.supernode_id, tree_link.subnode_id as node_id
-    from nodes_being_checked_in
-      join tree_link on nodes_being_checked_in.node_id = tree_link.supernode_id
-        join tree_node subnode on tree_link.subnode_id = subnode.id
-    where subnode.internal_type <> 'V'
+WITH RECURSIVE
+nodes_being_checked_in AS (
+    SELECT cast(NULL AS BIGINT) supernode_id, cast(? AS BIGINT) AS node_id
+UNION ALL
+    SELECT tree_link.supernode_id, tree_link.subnode_id AS node_id
+    FROM nodes_being_checked_in
+      JOIN tree_link ON nodes_being_checked_in.node_id = tree_link.supernode_id
+        JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
+    WHERE subnode.internal_type <> 'V'
 ),
-problems as (
+problems AS (
 SELECT
-    name_id, count(*) as ct
-    from nodes_being_checked_in
-    join tree_node on nodes_being_checked_in.node_id = tree_node.id
-    group by name_id
-    having count(*) > 1
+    name_id, count(*) AS ct
+    FROM nodes_being_checked_in
+    JOIN tree_node ON nodes_being_checked_in.node_id = tree_node.id
+    GROUP BY name_id
+    HAVING count(*) > 1
 )
-select problems.* from problems
-join name on problems.name_id = name.id
-where name.parent_id not in (select name_id from problems)
+SELECT problems.* FROM problems
+JOIN name ON problems.name_id = name.id
+WHERE name.parent_id NOT IN (SELECT name_id FROM problems)
 
 				'''
 
@@ -741,34 +787,107 @@ will result in a duplicate placement of ${n.name.simpleName}, which is currently
 
 
             void execute(Connection connection) throws SQLException {
-                if(true) {
+                if (true) {
+                    // check for name prefix issues
                     String sql = '''
-with recursive
-nodes_being_checked_in as (
-    select cast(null as bigint) supernode_id, cast(? as bigint) as node_id
-union all
-    select tree_link.supernode_id, tree_link.subnode_id as node_id
-    from nodes_being_checked_in
-      join tree_link on nodes_being_checked_in.node_id = tree_link.supernode_id
-        join tree_node subnode on tree_link.subnode_id = subnode.id
-    where subnode.internal_type <> 'V'
+WITH RECURSIVE
+links_being_checked_in AS (
+    SELECT tree_link.id link_id, tree_link.supernode_id, tree_link.subnode_id
+    FROM tree_link
+      JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
+    WHERE
+      tree_link.supernode_id = ?
+      AND subnode.internal_type <> 'V'
+UNION ALL
+    SELECT tree_link.id link_id, tree_link.supernode_id, tree_link.subnode_id
+    FROM links_being_checked_in
+      JOIN tree_link ON links_being_checked_in.subnode_id = tree_link.supernode_id
+      JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
+    WHERE subnode.internal_type <> 'V'
+)SELECT
+    l.link_id
+FROM
+  links_being_checked_in l
+  JOIN tree_node supernode ON l.supernode_id = supernode.id
+  JOIN tree_node subnode ON l.subnode_id = subnode.id
+  JOIN name subname ON subnode.name_id = subname.id
+  JOIN name_rank subname_rank ON subname.name_rank_id = subname_rank.id
+  join name_type subname_type on subname.name_type_id = subname_type.id
+  left outer join name subname_parent on subname.parent_id = subname_parent.id
+WHERE
+  subnode.type_uri_id_part = 'ApcConcept'
+  AND supernode.name_id IS NOT NULL
+  AND (
+      (
+        not subname_type.hybrid
+        AND subname.parent_id IS NOT NULL
+        AND subname.parent_id <> supernode.name_id
+      )
+      OR
+      (
+        subname_type.hybrid
+        AND subname_parent.parent_id IS NOT NULL
+        AND subname_parent.parent_id <> supernode.name_id
+      )
+  )
+
+  AND subname_rank.sort_order > 120
+				'''
+
+                    PreparedStatement stmt = connection.prepareStatement(sql)
+
+                    stmt.setLong(1, node.id);
+
+                    ResultSet rs = stmt.executeQuery()
+                    while (rs.next()) {
+                        Link l = Link.get(rs.getInt('link_id'))
+
+                        Name parentIs = l.supernode.name
+                        Name parentShouldBe = l.subnode.name.nameType.hybrid ? l.subnode.name.parent.parent : l.subnode.name.parent.parent
+
+                        Closure display = (parentIs.simpleName==parentShouldBe.simpleName) ? { Name it -> it.fullName } : { Name it -> it.simpleName }
+
+                        Message submsg = Message.makeMsg(Msg.EMPTY,
+"""
+${l.subnode.name.simpleName}
+is placed under
+${display(parentIs)}
+rather than
+${display(parentShouldBe)}
+"""
+                        )
+                        messages.add(submsg)
+                    }
+                }
+
+                if (true) {
+                    String sql = '''
+WITH RECURSIVE
+nodes_being_checked_in AS (
+    SELECT cast(NULL AS BIGINT) supernode_id, cast(? AS BIGINT) AS node_id
+UNION ALL
+    SELECT tree_link.supernode_id, tree_link.subnode_id AS node_id
+    FROM nodes_being_checked_in
+      JOIN tree_link ON nodes_being_checked_in.node_id = tree_link.supernode_id
+        JOIN tree_node subnode ON tree_link.subnode_id = subnode.id
+    WHERE subnode.internal_type <> 'V'
 ),
-problems as (
+problems AS (
 SELECT
-    a.node_id as a_node_id, a_synonym.id as a_synonym_id, b.node_id as b_node_id
-    from
+    a.node_id AS a_node_id, a_synonym.id AS a_synonym_id, b.node_id AS b_node_id
+    FROM
     nodes_being_checked_in a
-    join tree_node a_node on a.node_id = a_node.id
-    join instance a_synonym on a_node.instance_id = a_synonym.cited_by_id
-    join instance_type on a_synonym.instance_type_id = instance_type.id,
+    JOIN tree_node a_node ON a.node_id = a_node.id
+    JOIN instance a_synonym ON a_node.instance_id = a_synonym.cited_by_id
+    JOIN instance_type ON a_synonym.instance_type_id = instance_type.id,
     nodes_being_checked_in b
-    join tree_node b_node on b.node_id = b_node.id
-    where a_synonym.name_id = b_node.name_id
-    and a.node_id <> b.node_id
-    and not instance_type.misapplied
-    and not instance_type.pro_parte
+    JOIN tree_node b_node ON b.node_id = b_node.id
+    WHERE a_synonym.name_id = b_node.name_id
+    AND a.node_id <> b.node_id
+    AND NOT instance_type.misapplied
+    AND NOT instance_type.pro_parte
 )
-select * from problems
+SELECT * FROM problems
 				'''
 
                     PreparedStatement stmt = connection.prepareStatement(sql)
@@ -827,13 +946,13 @@ nodes_being_checked_in
   JOIN tree_node checkin_node ON nodes_being_checked_in.node_id = checkin_node.id
   --JOIN INSTANCE checkin_instance on checkin_node.instance_id = checkin_instance.id -- dont need this
   JOIN INSTANCE checkin_synonym ON checkin_node.instance_id = checkin_synonym.CITED_BY_ID
-  join instance_type on checkin_synonym.instance_type_id = instance_type.id
+  JOIN instance_type ON checkin_synonym.instance_type_id = instance_type.id
     ,
 links_being_replaced
   JOIN tree_node replaced_node ON links_being_replaced.subnode_id = replaced_node.id
 WHERE checkin_synonym.name_id = replaced_node.name_id
-    and not instance_type.misapplied
-    and not instance_type.pro_parte
+    AND NOT instance_type.misapplied
+    AND NOT instance_type.pro_parte
 )
 SELECT problems.* FROM problems
 -- we do all synonymy issues, not just the top level
@@ -909,10 +1028,10 @@ nodes_being_checked_in
 links_being_replaced
   JOIN tree_node replaced_node ON links_being_replaced.subnode_id = replaced_node.id
     JOIN instance replaced_synonym ON replaced_node.instance_id = replaced_synonym.cited_by_id
-  join instance_type on replaced_synonym.instance_type_id = instance_type.id
+  JOIN instance_type ON replaced_synonym.instance_type_id = instance_type.id
 WHERE replaced_synonym.name_id = checkin_node.name_id
-    and not instance_type.misapplied
-    and not instance_type.pro_parte
+    AND NOT instance_type.misapplied
+    AND NOT instance_type.pro_parte
 )
 SELECT problems.* FROM problems
 -- we do all synonymy issues, not just the top level
