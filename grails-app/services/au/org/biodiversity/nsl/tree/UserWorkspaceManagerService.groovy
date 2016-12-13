@@ -1211,7 +1211,7 @@ SELECT problems.* FROM problems
                 }
             } else {
                 newParentLink = DomainUtils.getSingleSublink(ws.node);
-                if (newParentLink.typeUriIdPart != 'workspace_top_node') throw new IllegalStateException(newParentLink.typeUriIdPart);
+                if (newParentLink.typeUriIdPart != 'workspace-top-node') throw new IllegalStateException(newParentLink.typeUriIdPart);
             }
 
 
@@ -1299,11 +1299,11 @@ SELECT problems.* FROM problems
 
         }
         catch (Throwable t) {
-            for (; t != null; t = t.cause) {
-                log.error(t.toString());
-                for (int i = 0; i < t.getStackTrace().length; i++) {
-                    if (t.getStackTrace()[i].className.startsWith("au.org.bio") && t.getStackTrace()[i].lineNumber >= 0) {
-                        log.error("  " + t.getStackTrace()[i].toString());
+            for (Throwable tt = t; tt != null; tt = tt.getCause()) {
+                log.error(tt.toString());
+                for (StackTraceElement e: tt.getStackTrace()) {
+                    if (e.getClassName().startsWith("au.org.bio") && e.getLineNumber() >= 0) {
+                        log.error("  " + e.toString());
                     }
                 }
 
