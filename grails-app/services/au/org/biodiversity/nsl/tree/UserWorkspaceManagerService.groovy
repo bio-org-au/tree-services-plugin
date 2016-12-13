@@ -1348,6 +1348,11 @@ SELECT problems.* FROM problems
                 ServiceException.raise(error);
             }
 
+            if(currentLink.subnode.subLink.find { Link l -> l.subnode.internalType != NodeInternalType.T } ) {
+                error.nested.add(Message.makeMsg(Msg.NODE_HAS_SUBTAXA, [currentLink.subnode]));
+                ServiceException.raise(error);
+            }
+
             Node currentNode = currentLink.supernode
 
             if (DomainUtils.isCheckedIn(currentLink.supernode)) {
@@ -1361,7 +1366,7 @@ SELECT problems.* FROM problems
             if (DomainUtils.isCheckedIn(currentLink.subnode)) {
                 basicOperationsService.deleteLink(currentNode, currentLink.linkSeq);
             } else {
-                basicOperationsService.deleteDraftNode(currentLink.subnode);
+                basicOperationsService.deleteDraftTree(currentLink.subnode);
             }
         }
         catch (ServiceException ex) {
