@@ -1169,7 +1169,7 @@ SELECT problems.* FROM problems
                 }
             } else {
                 newParentLink = DomainUtils.getSingleSublink(ws.node);
-                if (newParentLink.typeUriIdPart != 'workspace_top_node') throw new IllegalStateException(newParentLink.typeUriIdPart);
+                if (newParentLink.typeUriIdPart != 'workspace-top-node') throw new IllegalStateException(newParentLink.typeUriIdPart);
             }
 
             if (!error.nested.isEmpty()) ServiceException.raise(error);
