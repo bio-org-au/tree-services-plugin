@@ -1348,7 +1348,7 @@ SELECT problems.* FROM problems
                 ServiceException.raise(error);
             }
 
-            if(currentLink.subnode.subLink.find { Link l -> l.subnode.internalType != NodeInternalType.T } ) {
+            if(currentLink.subnode.subLink.find { Link l -> l.subnode.internalType == NodeInternalType.T } ) {
                 error.nested.add(Message.makeMsg(Msg.NODE_HAS_SUBTAXA, [currentLink.subnode]));
                 ServiceException.raise(error);
             }
