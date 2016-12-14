@@ -1281,7 +1281,7 @@ SELECT problems.* FROM problems
 
                 if (currentLink == null) {
                     log.debug("name is not in the tree. creating a new draft node")
-                    basicOperationsService.createDraftNode(newParentLink.supernode, VersioningMethod.V, NodeInternalType.T,
+                    basicOperationsService.createDraftNode(newParentLink.subnode, VersioningMethod.V, NodeInternalType.T,
                             nslName: name, nslInstance: instance, nodeType: placementType)
                 } else if (DomainUtils.isCheckedIn(currentLink.subnode)) {
                     log.debug("name is not checked out in the tree. Removing from old parent and adopting into the new one")
