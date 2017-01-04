@@ -24,6 +24,7 @@ import org.hibernate.SessionFactory
 import spock.lang.Specification
 
 import javax.sql.DataSource
+import java.sql.Timestamp
 
 import static au.org.biodiversity.nsl.tree.DomainUtils.*
 
@@ -40,8 +41,8 @@ class TreeProfileItemsSpec extends Specification {
     def "create and modify profile data"() {
         when: "create a node"
 
-        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'create and modify profile data')
-        Arrangement t = basicOperationsService.createClassification(e, 'test', 'test')
+        Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new Timestamp(System.currentTimeMillis()), 'TEST', 'create and modify profile data')
+        Arrangement t = basicOperationsService.createClassification(e, 'test', 'test', true)
 
         // I am using LSIDs for the sample uris just to annoy Greg if he ever finds out
 

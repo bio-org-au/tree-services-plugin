@@ -499,6 +499,30 @@ class VersioningService {
 				''',
                             { PreparedStatement qry -> qry.executeUpdate() }
 
+
+                    // NSL-2137
+                    // Before creating the synthetic nodes we need to replace the existing nodes, because if
+                    // ths isn't done then when the new synthetic nodes are inserted, they will be current and
+                    // have the same name_id as the existing node
+
+                    // unfortunately, the nodes that these nodes will be replaced *with* are not in the table yet.
+
+                    // So I will replace these nodes with the end node. After this, the 'replacing synthetic node'
+                    // code block below will put the correct replacement node id on these nodes.
+
+                    log.debug "temporarily replacing synthetic nodes with the end_node"
+                    withQ cnct, '''
+				update tree_node n
+				set lock_version = lock_version+1,
+				next_node_id = 0,
+				replaced_at_id = ?
+				where id in (select r.id from tree_syn_replacements r where r.id = n.id)
+				''',
+                            { PreparedStatement qry ->
+                                qry.setLong(1, e.id)
+                                qry.executeUpdate()
+                            }
+
                     // OK. Create the new synthetic nodes. tree_node, and tree_link.
 
                     log.debug "copy nodes"

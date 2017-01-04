@@ -18,6 +18,7 @@ package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.*;
 import grails.transaction.Transactional
+import org.apache.shiro.UnavailableSecurityManagerException
 import org.hibernate.SessionFactory
 import org.apache.shiro.SecurityUtils;
 
@@ -143,7 +144,12 @@ class BasicOperationsService {
     }
 
     private static String getPrincipal() {
-        return SecurityUtils.subject?.principal as String ?: 'No principal'
+        try {
+            return SecurityUtils.subject?.principal as String ?: 'No principal'
+        }
+        catch(UnavailableSecurityManagerException ex) {
+            return 'TEST'
+        }
     }
 
     /**
