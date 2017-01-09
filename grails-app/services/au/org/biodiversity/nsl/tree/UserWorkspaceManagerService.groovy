@@ -547,6 +547,8 @@ class UserWorkspaceManagerService {
 
     private Collection<Message> getCheckinErrors(Node node) {
 
+        Node checkin_target = DomainUtils.isCheckedIn(node) ? node : node.prev
+
         Collection<Message> messages = []
 
         sessionFactory_nsl.getCurrentSession().doWork(new Work() {
@@ -748,24 +750,33 @@ WHERE sup.checkin_node_id IS NULL
 
                     PreparedStatement stmt = connection.prepareStatement(sql)
 
-                    log.debug("nodes being checked in are the tree from ${node}")
-                    log.debug("nodes being replaced are the tree from ${node.prev.root.node}")
-                    log.debug("nodes being replaced will be clipped at  ${node.prev}")
+                    log.debug("nodes being checked in are the tree from ${node} ${node.root}")
+                    log.debug("nodes being replaced are the tree from ${checkin_target.root.node}  ${checkin_target.root}")
+                    log.debug("nodes being replaced will be clipped at  ${checkin_target}")
 
                     stmt.setLong(1, node.id);
-                    stmt.setLong(2, node.prev.root.node.id);
-                    stmt.setLong(3, node.prev.id);
-                    stmt.setLong(4, node.prev.id);
+                    stmt.setLong(2, checkin_target.root.node.id);
+                    stmt.setLong(3, checkin_target.id);
+                    stmt.setLong(4, checkin_target.id);
+
 
                     ResultSet rs = stmt.executeQuery()
                     while (rs.next()) {
                         Node checkin_supernode = Node.get(rs.getInt('checkin_supernode_id'))
                         Node n = Node.get(rs.getInt('checkin_node_id'))
                         Link l = Link.get(rs.getInt('being_enddated_link_id'))
-                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+
+                        Message submsg = Message.makeMsg(Msg.EMPTY,
+                                (node != checkin_target) ?
+"""
 Checking in ${node.name.simpleName} from "${node.root.title}"
-into ${node.prev.root.label}
-will result in a duplicate placement of ${n.name.simpleName}, which is currently placed in ${node.prev.root.label}.
+into ${checkin_target.root.label}
+will result in a duplicate placement of ${n.name.simpleName}, which is currently placed in ${checkin_target.root.label}.
+"""
+                        :
+                        """
+${n.name.simpleName}
+has a duplicate placement in ${node.root.label}.
 """)
 
                         messages.add(submsg)
@@ -780,6 +791,7 @@ will result in a duplicate placement of ${n.name.simpleName}, which is currently
     }
 
     private Collection<Message> getCheckinWarnings(Node node) {
+        Node checkin_target = DomainUtils.isCheckedIn(node) ? node : node.prev
 
         Collection<Message> messages = []
 
@@ -843,7 +855,7 @@ WHERE
                         Link l = Link.get(rs.getInt('link_id'))
 
                         Name parentIs = l.supernode.name
-                        Name parentShouldBe = l.subnode.name.nameType.hybrid ? l.subnode.name.parent.parent : l.subnode.name.parent.parent
+                        Name parentShouldBe = l.subnode.name.nameType.hybrid ? l.subnode.name.parent.parent : l.subnode.name.parent
 
                         Closure display = (parentIs.simpleName==parentShouldBe.simpleName) ? { Name it -> it.fullName } : { Name it -> it.simpleName }
 
@@ -963,13 +975,13 @@ SELECT problems.* FROM problems
                     PreparedStatement stmt = connection.prepareStatement(sql)
 
                     log.debug("nodes being checked in are the tree from ${node}")
-                    log.debug("nodes being replaced are the tree from ${node.prev.root.node}")
-                    log.debug("nodes being replaced will be clipped at  ${node.prev}")
+                    log.debug("nodes being replaced are the tree from ${checkin_target.root.node}")
+                    log.debug("nodes being replaced will be clipped at  ${checkin_target}")
 
                     stmt.setLong(1, node.id);
-                    stmt.setLong(2, node.prev.root.node.id);
-                    stmt.setLong(3, node.prev.id);
-                    stmt.setLong(4, node.prev.id);
+                    stmt.setLong(2, checkin_target.root.node.id);
+                    stmt.setLong(3, checkin_target.id);
+                    stmt.setLong(4, checkin_target.id);
 
                     ResultSet rs = stmt.executeQuery()
                     while (rs.next()) {
@@ -982,7 +994,7 @@ SELECT problems.* FROM problems
                     has a ${checkin_synonym.instanceType.hasLabel} ${
                             checkin_synonym.name.simpleName
                         },
-                    which appears elsewhere in ${node.prev.root.label}.
+                    which appears elsewhere in ${checkin_target.root.label}.
 """])
                         messages.add(submsg)
                     }
@@ -1042,13 +1054,13 @@ SELECT problems.* FROM problems
                     PreparedStatement stmt = connection.prepareStatement(sql)
 
                     log.debug("nodes being checked in are the tree from ${node}")
-                    log.debug("nodes being replaced are the tree from ${node.prev.root.node}")
-                    log.debug("nodes being replaced will be clipped at  ${node.prev}")
+                    log.debug("nodes being replaced are the tree from ${checkin_target.root.node}")
+                    log.debug("nodes being replaced will be clipped at  ${checkin_target}")
 
                     stmt.setLong(1, node.id);
-                    stmt.setLong(2, node.prev.root.node.id);
-                    stmt.setLong(3, node.prev.id);
-                    stmt.setLong(4, node.prev.id);
+                    stmt.setLong(2, checkin_target.root.node.id);
+                    stmt.setLong(3, checkin_target.id);
+                    stmt.setLong(4, checkin_target.id);
 
                     ResultSet rs = stmt.executeQuery()
                     while (rs.next()) {
@@ -1061,7 +1073,7 @@ SELECT problems.* FROM problems
                     is ${replaced_synonym.instanceType.ofLabel} ${
                             replaced_link.subnode.name.simpleName
                         } in ${replaced_synonym.reference.citation},
-                    which appears elsewhere in ${node.prev.root.label}.
+                    which appears elsewhere in ${checkin_target.root.label}.
 """])
                         messages.add(submsg)
                     }
