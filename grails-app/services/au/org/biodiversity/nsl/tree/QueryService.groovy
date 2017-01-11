@@ -581,16 +581,16 @@ select distinct relationship_instance_id from walk where tree_arrangement_id = ?
             ''', { PreparedStatement qry ->
                 qry.setLong(1, instance.id);
                 qry.setLong(2, tree.id);
-                qry.setLong(3, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(3, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
                 qry.setLong(4, tree.id);
-                qry.setLong(5, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(5, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
                 qry.setLong(6, tree.id);
                 qry.setLong(7, tree.id);
 
 
                 ResultSet rs = qry.executeQuery()
-                while(rs.next())
-                l.add(Instance.get(rs.getLong('relationship_instance_id')))
+                while (rs.next())
+                    l.add(Instance.get(rs.getLong('relationship_instance_id')))
                 rs.close()
             }
         }
@@ -626,15 +626,15 @@ select distinct relationship_instance_id from walk where tree_arrangement_id = ?
             ''', { PreparedStatement qry ->
                 qry.setLong(1, instance.id);
                 qry.setLong(2, tree.id);
-                qry.setLong(3, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(3, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
                 qry.setLong(4, tree.id);
-                qry.setLong(5, tree.baseArrangement==null ? tree.id: tree.baseArrangement.id );
+                qry.setLong(5, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
                 qry.setLong(6, tree.id);
                 qry.setLong(7, tree.id);
 
 
                 ResultSet rs = qry.executeQuery()
-                while(rs.next())
+                while (rs.next())
                     l.add(Instance.get(rs.getLong('relationship_instance_id')))
                 rs.close()
             }
@@ -690,7 +690,7 @@ select tree_runner.*
 from tree_runner
 where tree_runner.running_node_id = ?
 			''', { PreparedStatement sql ->
-                if(node.root.baseArrangement) {
+                if (node.root.baseArrangement) {
                     sql.setString(1, nameLike);
                     sql.setLong(2, node.root.id);
                     sql.setLong(3, node.root.baseArrangement.id);
@@ -698,8 +698,7 @@ where tree_runner.running_node_id = ?
                     sql.setLong(5, node.root.baseArrangement.id);
                     sql.setLong(6, node.id);
                     sql.setLong(7, node.id);
-                }
-                else {
+                } else {
                     sql.setString(1, nameLike);
                     sql.setLong(2, node.root.id);
                     sql.setLong(3, node.root.id);
@@ -710,8 +709,8 @@ where tree_runner.running_node_id = ?
                 try {
                     while (rs.next()) {
                         l.add([
-                                node: Node.get(rs.getLong('tree_node_id')),
-                                matchedInstance:  Instance.get(rs.getLong('instance_id'))
+                                node           : Node.get(rs.getLong('tree_node_id')),
+                                matchedInstance: Instance.get(rs.getLong('instance_id'))
                         ])
                     }
                 }
@@ -780,7 +779,7 @@ select tree_runner.*
 from tree_runner
 where tree_runner.running_node_id = ?
 			''', { PreparedStatement sql ->
-                if(node.root.baseArrangement) {
+                if (node.root.baseArrangement) {
                     sql.setString(1, nameLike);
                     sql.setLong(2, node.root.id);
                     sql.setLong(3, node.root.baseArrangement.id);
@@ -788,8 +787,7 @@ where tree_runner.running_node_id = ?
                     sql.setLong(5, node.root.baseArrangement.id);
                     sql.setLong(6, node.id);
                     sql.setLong(7, node.id);
-                }
-                else {
+                } else {
                     sql.setString(1, nameLike);
                     sql.setLong(2, node.root.id);
                     sql.setLong(3, node.root.id);
@@ -800,8 +798,8 @@ where tree_runner.running_node_id = ?
                 try {
                     while (rs.next()) {
                         l.add([
-                                node: Node.get(rs.getLong('tree_node_id')),
-                                matchedInstance:  Instance.get(rs.getLong('instance_id'))
+                                node           : Node.get(rs.getLong('tree_node_id')),
+                                matchedInstance: Instance.get(rs.getLong('instance_id'))
                         ])
                     }
                 }
@@ -814,7 +812,6 @@ where tree_runner.running_node_id = ?
         return l;
 
     }
-
 
 /**
  * Looks for a node in a tree, finding either the node itself or a checked-out version of the node. This is a common
@@ -911,7 +908,7 @@ select distinct start_id from ll where supernode_id = ?
             }
             return ct;
         }
-        catch(Exception e) {
+        catch (Exception e) {
             e.printStackTrace();
             throw e;
         }
@@ -1031,10 +1028,176 @@ select distinct start_id from ll where supernode_id = ?
             }
             return ct;
         }
-        catch(Exception e) {
+        catch (Exception e) {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    /**
+     * Find all names in n1 or n2, and work out changes. Do this by link id, because we want to report by
+     * placement rather than by node composition.
+     * @param n1
+     * @param n2
+     * @return
+     */
+
+    List findDifferences(Node n1, Node n2) {
+        log.debug("differences between ${n1} and ${n2}")
+
+        List l = [];
+
+        doWork(sessionFactory_nsl) { Connection cnct ->
+            withQ cnct, '''
+        with recursive tree_1 as (
+                select cast (null as bigint) as link_id,
+                       n.id as subnode_id,
+                       n.name_id as name_id
+                    from tree_node n
+                    where n.id = ?
+                union all
+                select  l.id as link_id,
+                l.subnode_id as subnode_id,
+                n.name_id as name_id
+                from tree_1
+                join tree_link l on tree_1.subnode_id = l.supernode_id
+                join tree_node n on l.subnode_id = n.id
+                where n.internal_type = 'T'
+        ),
+        tree_2 as (
+                select cast (null as bigint) as link_id,
+                       n.id as subnode_id,
+                       n.name_id as name_id
+                    from tree_node n
+                    where n.id = ?
+                union all
+                select  l.id as link_id,
+                l.subnode_id as subnode_id,
+                n.name_id as name_id
+                from tree_2
+                join tree_link l on tree_2.subnode_id = l.supernode_id
+                join tree_node n on l.subnode_id = n.id
+                where n.internal_type = 'T'
+        ),
+        names as ( select name_id from tree_1 union select name_id from tree_2)
+        select
+          names.name_id,
+          tree_1.link_id as link_1,
+          tree_2.link_id as link_2,
+          tree_1.subnode_id as subnode_1,
+          tree_2.subnode_id as subnode_2
+          from
+            names
+              join name on names.name_id = name.id
+                left outer join tree_1 on names.name_id = tree_1.name_id
+                left outer join tree_2 on names.name_id = tree_2.name_id
+            order by name.full_name
+				''',
+                    { PreparedStatement qry ->
+                        qry.setLong(1, n1.id)
+                        qry.setLong(2, n2.id)
+                        log.debug("about to execute the big query")
+                        ResultSet rs = qry.executeQuery()
+                        log.debug("got the resultset")
+                        try {
+                            while (rs.next()) {
+                                Name n = Name.get(rs.getLong('name_id'));
+                                Node nn1 = Node.get(rs.getLong('subnode_1'));
+                                Node nn2 = Node.get(rs.getLong('subnode_2'));
+                                Link l1 = Link.get(rs.getLong('link_1'));
+                                Link l2 = Link.get(rs.getLong('link_2'));
+
+
+
+                                log.debug("${n.fullName} ${nn1} ${l1} ${nn2} ${l2}");
+
+                                if(l1 != null && l2 != null && l1.id == l2.id) {
+                                    log.debug("just part of a common subtree");
+                                }
+
+                                assert nn1 != null || nn2 != null
+
+                                boolean placement_changed =
+                                        ((nn1 == null) != (nn2 == null)) ||
+                                                ((l1 == null) != (l2 == null)) ||
+                                                (l1 != null && l2 != null && l1.supernode.name?.id != l2.supernode.name?.id);
+
+                                if(!placement_changed && nn1.id == nn2.id) {
+                                    log.debug("same node under same name name. Continuing.")
+                                    continue;
+                                }
+
+                                List<String> changes = new ArrayList<String>();
+
+                                if(placement_changed) {
+                                    if(nn1 == null && nn2!=null) {
+                                        changes.add("New placement under ${l2.supernode.name.fullName}");
+                                    }
+                                    else if(nn1 != null && nn2==null) {
+                                        changes.add("Name removed from ${l1.supernode.name.fullName}");
+                                    }
+                                    else if(l1 == null && l2!=null) {
+                                        changes.add("Name moved from root to ${l2.supernode.name.fullName}");
+                                    }
+                                    else if(l1 != null && l==null) {
+                                        changes.add("Name moved from ${l1.supernode.name.fullName} to root");
+                                    }
+                                    else {
+                                        changes.add("Name moved from ${l1.supernode.name.fullName} to ${l2.supernode.name.fullName} ");
+                                    }
+                                }
+
+                                if(nn1 != null && nn2 != null && nn1.id != nn2.id) {
+                                    if(nn1.instance?.id != nn2.instance?.id) {
+                                        changes.add("reference changed from ${nn1.instance?.reference?.citation} to ${nn2.instance?.reference?.citation}")
+                                    }
+
+                                    if(nn1.typeUriIdPart != nn2.typeUriIdPart) {
+                                        changes.add("type changed from ${nn1.typeUriIdPart} to ${nn2.typeUriIdPart}")
+                                    }
+
+                                    Map<Uri, Link> pp1 = DomainUtils.getProfileItemsAsMap(nn1);
+                                    Map<Uri, Link> pp2 = DomainUtils.getProfileItemsAsMap(nn2);
+
+                                    Set<Uri> items = new HashSet<Uri>();
+                                    items.addAll(pp1.keySet());
+                                    items.addAll(pp2.keySet());
+
+                                    for(Uri u: items) {
+                                        if(pp1.containsKey(u) && pp2.containsKey(u)) {
+                                            if(pp1.get(u).subnode.literal != pp2.get(u).subnode.literal) {
+                                                changes.add("Profile item ${DomainUtils.vnuForItem(pp1.get(u))?.title ?: u} changed");
+                                            }
+                                        }
+                                        else if(!pp1.containsKey(u)) {
+                                            changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} added");
+                                        }
+                                        else if(!pp2.containsKey(u)) {
+                                            changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} removed");
+
+                                        }
+                                    }
+
+
+                                }
+
+                                // no filtering yet
+
+                                if(!changes.isEmpty()) {
+                                    l.add([name: n.fullName, changes: changes])
+                                }
+                            }
+                            log.debug("done iterating though the resultset")
+
+                        }
+                        finally {
+                            rs.close()
+                        }
+
+                    }
+        }
+
+        return l;
     }
 
     // This method returns a branch object. A branch object contains a top node, its placements, and its entire subnode tree.

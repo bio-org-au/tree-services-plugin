@@ -467,6 +467,10 @@ class DomainUtils {
 		return o.collect { refetchObject(it) }
 	}
 
+	static ValueNodeUri vnuForItem(Link l) {
+		return ValueNodeUri.findByRootAndLinkUriNsPartAndLinkUriIdPart(l.supernode.root, l.typeUriNsPart, l.typeUriIdPart)
+	}
+
 	static <T> T refetchObject(T o) {
 		if(o instanceof Node) {
 			return refetchNode(o as Node) as T;
