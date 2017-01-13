@@ -1103,11 +1103,13 @@ select distinct start_id from ll where supernode_id = ?
                             while (rs.next()) {
                                 Name n = Name.get(rs.getLong('name_id'));
                                 Node nn1 = Node.get(rs.getLong('subnode_1'));
+                                if(rs.wasNull()) nn1 = null;
                                 Node nn2 = Node.get(rs.getLong('subnode_2'));
+                                if(rs.wasNull()) nn2 = null;
                                 Link l1 = Link.get(rs.getLong('link_1'));
+                                if(rs.wasNull()) l1 = null;
                                 Link l2 = Link.get(rs.getLong('link_2'));
-
-
+                                if(rs.wasNull()) l2 = null;
 
                                 log.debug("${n.fullName} ${nn1} ${l1} ${nn2} ${l2}");
 
