@@ -1103,17 +1103,17 @@ select distinct start_id from ll where supernode_id = ?
                             while (rs.next()) {
                                 Name n = Name.get(rs.getLong('name_id'));
                                 Node nn1 = Node.get(rs.getLong('subnode_1'));
-                                if(rs.wasNull()) nn1 = null;
+                                if (rs.wasNull()) nn1 = null;
                                 Node nn2 = Node.get(rs.getLong('subnode_2'));
-                                if(rs.wasNull()) nn2 = null;
+                                if (rs.wasNull()) nn2 = null;
                                 Link l1 = Link.get(rs.getLong('link_1'));
-                                if(rs.wasNull()) l1 = null;
+                                if (rs.wasNull()) l1 = null;
                                 Link l2 = Link.get(rs.getLong('link_2'));
-                                if(rs.wasNull()) l2 = null;
+                                if (rs.wasNull()) l2 = null;
 
                                 log.debug("${n.fullName} ${nn1} ${l1} ${nn2} ${l2}");
 
-                                if(l1 != null && l2 != null && l1.id == l2.id) {
+                                if (l1 != null && l2 != null && l1.id == l2.id) {
                                     log.debug("just part of a common subtree");
                                 }
 
@@ -1124,37 +1124,39 @@ select distinct start_id from ll where supernode_id = ?
                                                 ((l1 == null) != (l2 == null)) ||
                                                 (l1 != null && l2 != null && l1.supernode.name?.id != l2.supernode.name?.id);
 
-                                if(!placement_changed && nn1.id == nn2.id) {
+                                if (!placement_changed && nn1.id == nn2.id) {
                                     log.debug("same node under same name name. Continuing.")
                                     continue;
                                 }
 
                                 List<String> changes = new ArrayList<String>();
 
-                                if(placement_changed) {
-                                    if(nn1 == null && nn2!=null) {
-                                        changes.add("New placement under ${l2.supernode.name.fullName}");
-                                    }
-                                    else if(nn1 != null && nn2==null) {
-                                        changes.add("Name removed from ${l1.supernode.name.fullName}");
-                                    }
-                                    else if(l1 == null && l2!=null) {
+                                if (placement_changed) {
+                                    if (nn1 == null && nn2 != null) {
+                                        if (l2 == null)
+                                            changes.add("New placement");
+                                        else
+                                            changes.add("New placement under ${l2.supernode.name.fullName}");
+                                    } else if (nn1 != null && nn2 == null) {
+                                        if (l2 == null)
+                                            changes.add("Name removed");
+                                        else
+                                            changes.add("Name removed from ${l1.supernode.name.fullName}");
+                                    } else if (l1 == null && l2 != null) {
                                         changes.add("Name moved from root to ${l2.supernode.name.fullName}");
-                                    }
-                                    else if(l1 != null && l==null) {
+                                    } else if (l1 != null && l == null) {
                                         changes.add("Name moved from ${l1.supernode.name.fullName} to root");
-                                    }
-                                    else {
+                                    } else {
                                         changes.add("Name moved from ${l1.supernode.name.fullName} to ${l2.supernode.name.fullName} ");
                                     }
                                 }
 
-                                if(nn1 != null && nn2 != null && nn1.id != nn2.id) {
-                                    if(nn1.instance?.id != nn2.instance?.id) {
+                                if (nn1 != null && nn2 != null && nn1.id != nn2.id) {
+                                    if (nn1.instance?.id != nn2.instance?.id) {
                                         changes.add("reference changed from ${nn1.instance?.reference?.citation} to ${nn2.instance?.reference?.citation}")
                                     }
 
-                                    if(nn1.typeUriIdPart != nn2.typeUriIdPart) {
+                                    if (nn1.typeUriIdPart != nn2.typeUriIdPart) {
                                         changes.add("type changed from ${nn1.typeUriIdPart} to ${nn2.typeUriIdPart}")
                                     }
 
@@ -1165,16 +1167,14 @@ select distinct start_id from ll where supernode_id = ?
                                     items.addAll(pp1.keySet());
                                     items.addAll(pp2.keySet());
 
-                                    for(Uri u: items) {
-                                        if(pp1.containsKey(u) && pp2.containsKey(u)) {
-                                            if(pp1.get(u).subnode.literal != pp2.get(u).subnode.literal) {
+                                    for (Uri u : items) {
+                                        if (pp1.containsKey(u) && pp2.containsKey(u)) {
+                                            if (pp1.get(u).subnode.literal != pp2.get(u).subnode.literal) {
                                                 changes.add("Profile item ${DomainUtils.vnuForItem(pp1.get(u))?.title ?: u} changed");
                                             }
-                                        }
-                                        else if(!pp1.containsKey(u)) {
+                                        } else if (!pp1.containsKey(u)) {
                                             changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} added");
-                                        }
-                                        else if(!pp2.containsKey(u)) {
+                                        } else if (!pp2.containsKey(u)) {
                                             changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} removed");
 
                                         }
@@ -1185,7 +1185,7 @@ select distinct start_id from ll where supernode_id = ?
 
                                 // no filtering yet
 
-                                if(!changes.isEmpty()) {
+                                if (!changes.isEmpty()) {
                                     l.add([name: n.fullName, changes: changes])
                                 }
                             }
