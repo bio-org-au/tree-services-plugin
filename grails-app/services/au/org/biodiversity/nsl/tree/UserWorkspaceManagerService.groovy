@@ -526,16 +526,10 @@ class UserWorkspaceManagerService {
         basicOperationsService.moveNodeSubtreeIntoArrangement(node.root, node.prev.root, node);
         node = DomainUtils.refetchNode(node);
 
-        // I am not going to attempt to display what has been changed.
-        // The client is just going to have to refresh everything.
-
-        if (true) ServiceException.raise(Message.makeMsg(Msg.TODO, 'Checkin integrity checks.'));
-
         return [
                 target  : node,
                 modified: [node]
         ]
-
     }
 
 
