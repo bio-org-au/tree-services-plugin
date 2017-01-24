@@ -585,12 +585,12 @@ WHERE superrank.sort_order > subrank.sort_order
                     ResultSet rs = stmt.executeQuery()
                     while (rs.next()) {
                         Link l = Link.get(rs.getInt('link_id'))
-                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+                        Message submsg = Message.makeMsg(Msg.EMPTY, ["""
 ${l.subnode.name.simpleName} with rank ${l.subnode.name.nameRank.name}
 is placed under
 ${l.supernode.name.simpleName} with rank ${l.supernode.name.nameRank.name}
 .
-""")
+""", l.subnode, l.supernode])
                         messages.add(submsg)
                     }
                 }
@@ -643,11 +643,11 @@ WHERE node_id NOT IN (SELECT node_id FROM one_distinct_problem_super)
                     ResultSet rs = stmt.executeQuery()
                     while (rs.next()) {
                         Node n = Node.get(rs.getInt('node_id'))
-                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+                        Message submsg = Message.makeMsg(Msg.EMPTY, ["""
 ${node.name.simpleName} from "${node.root.title}"
 contains a node ${n.name.simpleName}
 which is attached in multiple places (graph diamond).
-""")
+""", n.name])
 
                         messages.add(submsg)
                     }
@@ -689,10 +689,10 @@ WHERE name.parent_id NOT IN (SELECT name_id FROM problems)
                     while (rs.next()) {
                         Name n = Name.get(rs.getInt('name_id'))
                         int ct = rs.getInt('ct')
-                        Message submsg = Message.makeMsg(Msg.EMPTY, """
+                        Message submsg = Message.makeMsg(Msg.EMPTY, ["""
 ${node.name.simpleName} from "${node.root.title}"
 contains ${n.simpleName} ${ct} times
-""")
+""", n])
                         messages.add(submsg)
                     }
 
@@ -760,7 +760,7 @@ WHERE sup.checkin_node_id IS NULL
                         Node n = Node.get(rs.getInt('checkin_node_id'))
                         Link l = Link.get(rs.getInt('being_enddated_link_id'))
 
-                        Message submsg = Message.makeMsg(Msg.EMPTY,
+                        Message submsg = Message.makeMsg(Msg.EMPTY, [
                                 (node != checkin_target) ?
 """
 Checking in ${node.name.simpleName} from "${node.root.title}"
@@ -771,7 +771,7 @@ will result in a duplicate placement of ${n.name.simpleName}, which is currently
                         """
 ${n.name.simpleName}
 has a duplicate placement in ${node.root.label}.
-""")
+""", checkin_supernode, n])
 
                         messages.add(submsg)
 
@@ -853,7 +853,7 @@ WHERE
 
                         Closure display = (parentIs.simpleName==parentShouldBe.simpleName) ? { Name it -> it.fullName } : { Name it -> it.simpleName }
 
-                        Message submsg = Message.makeMsg(Msg.EMPTY,
+                        Message submsg = Message.makeMsg(Msg.EMPTY, [
 """
 ${l.subnode.name.simpleName}
 is placed under
@@ -861,7 +861,7 @@ ${display(parentIs)}
 rather than
 ${display(parentShouldBe)}
 """
-                        )
+                        , l.subnode, parentIs, parentShouldBe])
                         messages.add(submsg)
                     }
                 }
@@ -909,7 +909,7 @@ SELECT * FROM problems
 ${a_node.name.simpleName} in ${a_node.instance.reference.citation}
 has a ${a_synonym.instanceType.hasLabel} ${a_synonym.name.simpleName}
 which appears elsewhere in the check-in.
-"""])
+""", a_node, a_synonym, b_node])
                         messages.add(submsg)
                     }
                 }
@@ -989,7 +989,7 @@ SELECT problems.* FROM problems
                             checkin_synonym.name.simpleName
                         },
                     which appears elsewhere in ${checkin_target.root.label}.
-"""])
+""", checkin_node, checkin_synonym])
                         messages.add(submsg)
                     }
 
@@ -1068,7 +1068,7 @@ SELECT problems.* FROM problems
                             replaced_link.subnode.name.simpleName
                         } in ${replaced_synonym.reference.citation},
                     which appears elsewhere in ${checkin_target.root.label}.
-"""])
+""",checkin_node, replaced_link.subnode])
                         messages.add(submsg)
                     }
 
