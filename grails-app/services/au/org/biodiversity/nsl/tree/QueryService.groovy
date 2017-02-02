@@ -914,6 +914,34 @@ select distinct start_id from ll where supernode_id = ?
         }
     }
 
+    int countImmediateSubtaxa(Node n) {
+        if (n == null) return 0;
+        long ct;
+
+        doWork(sessionFactory_nsl) { Connection cnct ->
+            withQ cnct, '''
+        select count(*) ct
+        from tree_link l
+        join tree_node n on l.subnode_id = n.id
+        where l.supernode_id = ?
+        and n.internal_type in ('S','T')
+				''',
+                    { PreparedStatement qry ->
+                        qry.setLong(1, n.id)
+                        ResultSet rs = qry.executeQuery()
+                        try {
+                            rs.next();
+                            ct = rs.getLong('ct')
+                        }
+                        finally {
+                            rs.close()
+                        }
+
+                    }
+        }
+
+        return ct;
+    }
 
     List<Node> findPath(Node root, Node focus) {
         List<Node> l = new ArrayList<Node>();
