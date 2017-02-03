@@ -943,6 +943,39 @@ select distinct start_id from ll where supernode_id = ?
         return ct;
     }
 
+    Map<Long, Integer> getSubtaxaCountForAllSubtaxa(Node n) {
+        Map<Long, Integer> m = new HashMap<Node, Integer>()
+
+        doWork(sessionFactory_nsl) { Connection cnct ->
+            withQ cnct, '''
+        select l1.subnode_id as node_id, count(l2.subnode_id) as subnodes
+        from tree_link l1
+        join tree_node n1 on l1.subnode_id = n1.id
+        join tree_link l2 on l1.subnode_id = l2.supernode_id
+        join tree_node n2 on l2.subnode_id = n2.id
+        where l1.supernode_id = ?
+        and n1.internal_type in ('S','T')
+        and n2.internal_type in ('S','T')
+        group by l1.subnode_id
+				''',
+                    { PreparedStatement qry ->
+                        qry.setLong(1, n.id)
+                        ResultSet rs = qry.executeQuery()
+                        try {
+                            while (rs.next()) {
+                                m.put(rs.getLong('node_id'), rs.getInt('subnodes'))
+                            }
+                        }
+                        finally {
+                            rs.close()
+                        }
+
+                    }
+        }
+
+        return m
+    }
+
     List<Node> findPath(Node root, Node focus) {
         List<Node> l = new ArrayList<Node>();
 
