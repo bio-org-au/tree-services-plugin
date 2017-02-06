@@ -2,21 +2,19 @@ package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.ArrangementType
+import au.org.biodiversity.nsl.Event
+import au.org.biodiversity.nsl.Namespace
 import au.org.biodiversity.nsl.NodeInternalType
 import au.org.biodiversity.nsl.Node
-import au.org.biodiversity.nsl.Event;
-import au.org.biodiversity.nsl.Link;
 
 import javax.sql.DataSource
 
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.hibernate.SessionFactory
-import au.org.biodiversity.nsl.VersioningMethod;
 import spock.lang.*
 
-import java.sql.Connection
-import java.sql.ResultSet
+import java.sql.Timestamp
 
 @Mixin(BuildSampleTreeMixin)
 class CreateDeleteWorkspaceSpec extends Specification {
@@ -46,33 +44,44 @@ class CreateDeleteWorkspaceSpec extends Specification {
 
     def "test CRUD workspace"() {
         when:
+        Namespace testNamespace = TreeTestUtil.getTestNamespace()
+        Event event = new Event(timeStamp: new Timestamp(System.currentTimeMillis()), authUser: 'fred', namespace: testNamespace)
+        event.save()
+        Arrangement baseClassification = basicOperationsService.createClassification(event, 'base-classification', 'a description', false)
+
         long treeid
-        sessionFactory_nsl.currentSession.flush();
-        sessionFactory_nsl.currentSession.clear();
+        sessionFactory_nsl.currentSession.flush()
+        sessionFactory_nsl.currentSession.clear()
 
-        treeid = userWorkspaceManagerService.createWorkspace(TreeTestUtil.getTestNamespace(), 'TEST', 'test workspace', '<b>test</b> workspace').id
+        treeid = userWorkspaceManagerService.createWorkspace(
+                TreeTestUtil.getTestNamespace(),
+                baseClassification,
+                'TEST',
+                false,
+                'test workspace',
+                '<b>test</b> workspace').id
 
-        sessionFactory_nsl.currentSession.flush();
-        sessionFactory_nsl.currentSession.clear();
+        sessionFactory_nsl.currentSession.flush()
+        sessionFactory_nsl.currentSession.clear()
 
-        Arrangement t = Arrangement.get(treeid)
+        Arrangement workspace = Arrangement.get(treeid)
 
         then:
-        t
-        t.arrangementType == ArrangementType.U
-        t.title == 'test workspace'
-        t.description
+        workspace
+        workspace.arrangementType == ArrangementType.U
+        workspace.title == 'test workspace'
+        workspace.description
 
         // workspace node should be a workspace-node
 
-        t.node.typeUriIdPart == 'workspace-root'
+        workspace.node.typeUriIdPart == 'workspace-root'
 
         // it should have one subnode
 
-        t.node.subLink.size() == 1
+        workspace.node.subLink.size() == 1
 
         when:
-        Node wsWorkingRoot = t.node
+        Node wsWorkingRoot = workspace.node
 
         then:
 
@@ -89,36 +98,36 @@ class CreateDeleteWorkspaceSpec extends Specification {
 
         // that is a branch off the root
 
-        wsWorkingRoot.prev == wsRoot
+        wsWorkingRoot.prev == null
 
         when:
-        sessionFactory_nsl.currentSession.flush();
-        sessionFactory_nsl.currentSession.clear();
+        sessionFactory_nsl.currentSession.flush()
+        sessionFactory_nsl.currentSession.clear()
 
-        userWorkspaceManagerService.updateWorkspace(t, 'renamed workspace', null)
+        userWorkspaceManagerService.updateWorkspace(workspace, false, 'renamed workspace', null)
 
-        sessionFactory_nsl.currentSession.flush();
-        sessionFactory_nsl.currentSession.clear();
+        sessionFactory_nsl.currentSession.flush()
+        sessionFactory_nsl.currentSession.clear()
 
-        t = Arrangement.get(treeid)
+        workspace = Arrangement.get(treeid)
 
         then:
-        t
-        t.title == 'renamed workspace'
-        !t.description
+        workspace
+        workspace.title == 'renamed workspace'
+        !workspace.description
 
         when:
-        sessionFactory_nsl.currentSession.flush();
-        sessionFactory_nsl.currentSession.clear();
+        sessionFactory_nsl.currentSession.flush()
+        sessionFactory_nsl.currentSession.clear()
 
-        userWorkspaceManagerService.deleteWorkspace(t)
+        userWorkspaceManagerService.deleteWorkspace(workspace)
 
-        sessionFactory_nsl.currentSession.flush();
-        sessionFactory_nsl.currentSession.clear();
+        sessionFactory_nsl.currentSession.flush()
+        sessionFactory_nsl.currentSession.clear()
 
-        t = Arrangement.get(treeid)
+        workspace = Arrangement.get(treeid)
 
         then:
-        !t
+        !workspace
     }
 }
