@@ -150,11 +150,11 @@ class Message implements MessageSourceResolvable {
 
     private static String prefTitle(Node node) {
         if(node.instance) {
-            return "${prefTitle(node.instance)} in ${prefTitle(node.root)} "
+            return "${prefTitle(node.instance)} (Name #${node.instance.name.id}) in ${prefTitle(node.root)} "
         }
         else
         if(node.name) {
-            return "${prefTitle(node.name)} in ${prefTitle(node.root)} "
+            return "${prefTitle(node.name)} (Name #${node.name.id}) in ${prefTitle(node.root)} "
         }
         else {
             return node.typeUriIdPart ?: 'Node'
