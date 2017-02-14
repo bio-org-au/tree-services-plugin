@@ -43,7 +43,7 @@ class UserWorkspaceManagerService {
             throw new IllegalArgumentException("baseTree must be a classifcation");
         }
 
-        Event e = basicOperationsService.newEvent namespace, "Create workspace on ${baseTree.label} for ${owner}", owner
+        Event e = basicOperationsService.newEvent(namespace, "Create workspace on ${baseTree.label} for ${owner}", owner)
         baseTree = DomainUtils.refetchArrangement(baseTree);
 
         Arrangement ws = basicOperationsService.createWorkspace(e, baseTree, owner, shared, title, description)

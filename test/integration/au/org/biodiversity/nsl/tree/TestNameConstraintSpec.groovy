@@ -79,10 +79,9 @@ class TestNameConstraintSpec extends Specification {
 
         then:
         apni
-
         apni.label == 'APNI'
 
-        when:
+        when: "we try to add a name in the current tree"
 
         treeOperationsService.addName(
             Arrangement.findByLabel('APNI'),
@@ -92,8 +91,8 @@ class TestNameConstraintSpec extends Specification {
         )
 
 
-        then:
-            1
+        then: "A service exception is thrown"
+            thrown ServiceException
     }
 
 }

@@ -16,11 +16,11 @@
 
 package au.org.biodiversity.nsl.tree
 
-import au.org.biodiversity.nsl.*;
+import au.org.biodiversity.nsl.*
 import grails.transaction.Transactional
 import org.apache.shiro.UnavailableSecurityManagerException
 import org.hibernate.SessionFactory
-import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.SecurityUtils
 
 import java.security.Principal
 import java.sql.Connection
@@ -126,7 +126,7 @@ class BasicOperationsService {
         return queryService.getTimestamp()
     }
 
-    def checkAndSave(def thing, List errors) {
+    def checkAndSave(thing, List errors) {
         if (thing.validate()) {
             thing.save()
         } else {
@@ -163,12 +163,12 @@ class BasicOperationsService {
     }
 
     Event newEvent(Namespace namespace, String note, String authUser) {
-        newEventTs(namespace, new Timestamp(new Date().time), authUser, note);
+        newEventTs(namespace, new Timestamp(new Date().time), authUser, note)
     }
 
     Event newEventTs(Namespace namespace, Timestamp ts, String authUser, String note) {
-        if (!namespace) throw new IllegalArgumentException("null namespace");
-        if (!ts) throw new IllegalArgumentException("null timestamp");
+        if (!namespace) throw new IllegalArgumentException("null namespace")
+        if (!ts) throw new IllegalArgumentException("null timestamp")
         if (!authUser) {
             authUser = getPrincipal()
         }
@@ -176,12 +176,12 @@ class BasicOperationsService {
         clearAndFlush {
             Event event = new Event(namespace: namespace, note: note, authUser: authUser, timeStamp: ts)
             event.save()
-            return event;
+            return event
         } as Event
     }
 
     Arrangement createTemporaryArrangement(Namespace namespace) {
-        if (!namespace) throw new IllegalArgumentException("null namespace");
+        if (!namespace) throw new IllegalArgumentException("null namespace")
         clearAndFlush {
             // temporary arangments do not belong to any shard
             Arrangement tempArrangement = new Arrangement(arrangementType: ArrangementType.Z, synthetic: 'Y', namespace: namespace, owner: 'INTERNAL')
@@ -222,7 +222,7 @@ class BasicOperationsService {
                         owner: event.authUser,
                         shared: shared
                 )
-                classification.save();
+                classification.save()
 
                 Node classificationNode = new Node(
                         root: classification,
@@ -232,7 +232,7 @@ class BasicOperationsService {
                         synthetic: false,
                         checkedInAt: event
                 )
-                classificationNode.save();
+                classificationNode.save()
 
                 Node classificationRoot = new Node(
                         root: classification,
@@ -251,7 +251,7 @@ class BasicOperationsService {
                 // node also has to be set. Grr.
 
                 classification.node = classificationNode
-                classification.save();
+                classification.save()
 
                 Link classificationRootLink = new Link(
                         supernode: classificationNode,
@@ -284,10 +284,10 @@ class BasicOperationsService {
             clearAndFlush {
                 event = DomainUtils.refetchEvent(event)
 
-                baseArrangement = DomainUtils.refetchArrangement(baseArrangement);
+                baseArrangement = DomainUtils.refetchArrangement(baseArrangement)
 
                 if(event.namespace != baseArrangement.namespace) {
-                    thow new IllegalArgumentException("event.namespace != baseArrangement.namespace");
+                    throw new IllegalArgumentException("event.namespace != baseArrangement.namespace")
                 }
 
                 Arrangement workspace = new Arrangement(
@@ -299,7 +299,7 @@ class BasicOperationsService {
                         shared: shared,
                         title: title,
                         description: description)
-                workspace.save();
+                workspace.save()
 
                 Node workspaceRoot = new Node(
                         root: workspace,
@@ -317,7 +317,7 @@ class BasicOperationsService {
                 // node also has to be set. Grr.
 
                 workspace.node = workspaceRoot
-                workspace.save();
+                workspace.save()
 
                 return workspace
             } as Arrangement
@@ -329,16 +329,16 @@ class BasicOperationsService {
             clearAndFlush {
                 arrangement = DomainUtils.refetchArrangement(arrangement)
 
-                if(arrangement.arrangementType != ArrangementType.U) throw new IllegalArgumentException("Not a workspace");
+                if(arrangement.arrangementType != ArrangementType.U) throw new IllegalArgumentException("Not a workspace")
 
                 if (!title) {
-                    throw new IllegalArgumentException("Workspaces must have a title");
+                    throw new IllegalArgumentException("Workspaces must have a title")
                 }
 
-                arrangement.shared = shared;
-                arrangement.title = title;
-                arrangement.description = description;
-                arrangement.save();
+                arrangement.shared = shared
+                arrangement.title = title
+                arrangement.description = description
+                arrangement.save()
             }
         }
     }
@@ -350,26 +350,26 @@ class BasicOperationsService {
 
                 switch (arrangement.arrangementType) {
                     case ArrangementType.E:
-                        throw new IllegalArgumentException("The end tree cannot be modified");
-                        break;
+                        throw new IllegalArgumentException("The end tree cannot be modified")
+                        break
 
                     case ArrangementType.P:
-                        break;
+                        break
 
                     case ArrangementType.U:
                         if (!title) {
-                            throw new IllegalArgumentException("Workspaces must have a title");
+                            throw new IllegalArgumentException("Workspaces must have a title")
                         }
-                        break;
+                        break
 
                     case ArrangementType.Z:
-                        throw new IllegalArgumentException("Temp trees cannot be modified");
-                        break;
+                        throw new IllegalArgumentException("Temp trees cannot be modified")
+                        break
                 }
 
-                arrangement.title = title;
-                arrangement.description = description;
-                arrangement.save();
+                arrangement.title = title
+                arrangement.description = description
+                arrangement.save()
             }
         }
     }
@@ -400,7 +400,7 @@ class BasicOperationsService {
                 String literal = params.literal as String
                 Integer linkSeq = params.seq as Integer
                 Name nslName = params.nslName as Name
-                Instance nslInstance = params.nslInstance as Instance;
+                Instance nslInstance = params.nslInstance as Instance
 
                 if (nslName && name == null) {
                     name = new Uri(nslNameNs(), nslName.id)
@@ -480,7 +480,7 @@ class BasicOperationsService {
 
         if (nslInstance) {
             if (!taxon || taxon.nsPart != nslInstanceNs() || taxon.idPart != (nslInstance.id as String)) {
-                ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.INSTANCE_URI_DOESNT_MATCH, [taxon, nslInstance])]);
+                ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.INSTANCE_URI_DOESNT_MATCH, [taxon, nslInstance])])
             }
             if (supernode.root.namespace != nslInstance.namespace) {
                 ServiceException.raise ServiceException.makeMsg(Msg.createDraftNode, [supernode, ServiceException.makeMsg(Msg.NAMESPACE_MISMATCH, [supernode.root.namespace, nslInstance.namespace])])
@@ -550,7 +550,7 @@ class BasicOperationsService {
  * @param n
  */
 
-    public void updateDraftNode(Map params = [:], Node n) {
+    void updateDraftNode(Map params = [:], Node n) {
         mustHave(node: n) {
             clearAndFlush {
                 n = DomainUtils.refetchNode(n)
@@ -611,18 +611,18 @@ class BasicOperationsService {
 
                 if (nslName) {
                     if (!name || name.nsPart != nslNameNs() || name.idPart != (nslName.id as String)) {
-                        ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [n, ServiceException.makeMsg(Msg.NAME_URI_DOESNT_MATCH, [name, nslName])]);
+                        ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [n, ServiceException.makeMsg(Msg.NAME_URI_DOESNT_MATCH, [name, nslName])])
                     }
 
-                    n.name = nslName;
+                    n.name = nslName
                 }
 
                 if (nslInstance) {
                     if (!taxon || taxon.nsPart != nslInstanceNs() || taxon.idPart != (nslInstance.id as String)) {
-                        ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [n, ServiceException.makeMsg(Msg.INSTANCE_URI_DOESNT_MATCH, [taxon, nslInstance])]);
+                        ServiceException.raise ServiceException.makeMsg(Msg.updateDraftNode, [n, ServiceException.makeMsg(Msg.INSTANCE_URI_DOESNT_MATCH, [taxon, nslInstance])])
                     }
 
-                    n.instance = nslInstance;
+                    n.instance = nslInstance
                 }
 
                 if (name != null) {
@@ -659,7 +659,7 @@ class BasicOperationsService {
  * @param nodeSeq
  */
 
-    public void updateDraftNodeLink(Map params = [:], Node node, int seq) {
+    void updateDraftNodeLink(Map params = [:], Node node, int seq) {
         // ok, we have two separate things to do. We want to update the node properties, if there
         // are any to update, and we maybe want to change the position of the node
 
@@ -842,7 +842,7 @@ class BasicOperationsService {
         }
     }
 
-    public Link simpleMoveDraftLink(Map params = [:], Link l, Node newSupernode) {
+    Link simpleMoveDraftLink(Map params = [:], Link l, Node newSupernode) {
         mustHave(link: l, newSupernode: newSupernode) {
 
             Integer linkSeq = params.linkSeq as Integer
@@ -850,40 +850,40 @@ class BasicOperationsService {
 
             if(!linkSeq) {
                 if (prevLink) {
-                    linkSeq = prevLink.linkSeq;
+                    linkSeq = prevLink.linkSeq
                 } else {
-                    linkSeq = 0;
+                    linkSeq = 0
                     for (Link ll : newSupernode.subLink) {
-                        linkSeq = Math.max(linkSeq, ll.linkSeq);
+                        linkSeq = Math.max(linkSeq, ll.linkSeq)
                     }
                 }
-                linkSeq = linkSeq + 1;
+                linkSeq = linkSeq + 1
             }
 
-            if(linkSeq <= 0) throw new IllegalArgumentException("linkSeq ${linkSeq} must be positive");
+            if(linkSeq <= 0) throw new IllegalArgumentException("linkSeq ${linkSeq} must be positive")
 
             l = DomainUtils.refetchLink(l)
             newSupernode = DomainUtils.refetchNode(newSupernode)
 
-            if (l.supernode.id == newSupernode.id) return;
+            if (l.supernode.id == newSupernode.id) return
 
 
-            if (DomainUtils.isCheckedIn(l.supernode)) throw new IllegalArgumentException("existing link is checked in");
-            if (DomainUtils.isCheckedIn(newSupernode)) throw new IllegalArgumentException("target is checked in");
-            if (l.supernode.root.id != newSupernode.root.id) throw new IllegalArgumentException("target is from a different tree");
+            if (DomainUtils.isCheckedIn(l.supernode)) throw new IllegalArgumentException("existing link is checked in")
+            if (DomainUtils.isCheckedIn(newSupernode)) throw new IllegalArgumentException("target is checked in")
+            if (l.supernode.root.id != newSupernode.root.id) throw new IllegalArgumentException("target is from a different tree")
 
             for (Node sup = newSupernode; sup; sup = DomainUtils.getSingleSupernode(sup)) {
                 if (sup.id == l.subnode.id) {
-                    throw new IllegalArgumentException("new supernode is a subnode of the link");
+                    throw new IllegalArgumentException("new supernode is a subnode of the link")
                 }
             }
 
-            l.supernode = newSupernode;
-            l.linkSeq = linkSeq;
+            l.supernode = newSupernode
+            l.linkSeq = linkSeq
 
-            l.save();
+            l.save()
 
-            return l;
+            return l
         }
     }
 
@@ -894,7 +894,7 @@ class BasicOperationsService {
  * @param nodeSeq
  */
 
-    public void deleteLink(Node n, int seq) {
+    void deleteLink(Node n, int seq) {
         mustHave(node: n) {
             clearAndFlush {
                 n = DomainUtils.refetchNode(n)
@@ -934,7 +934,7 @@ class BasicOperationsService {
 
 /** delete a draft node that does not have subnodes. */
 
-    public void deleteDraftNode(Node n) {
+    void deleteDraftNode(Node n) {
         mustHave(node: n) {
             clearAndFlush {
                 n = DomainUtils.refetchNode(n)
@@ -978,7 +978,7 @@ class BasicOperationsService {
 
 /** recursively delete a draft node and all of its subnodes */
 
-    public void deleteDraftTree(Node n) {
+    void deleteDraftTree(Node n) {
         mustHave(node: n) {
             clearAndFlush {
                 n = DomainUtils.refetchNode(n)
@@ -1011,7 +1011,7 @@ class BasicOperationsService {
         }
     }
 
-    public void deleteArrangement(Arrangement arrangement) {
+    void deleteArrangement(Arrangement arrangement) {
         mustHave(arrangement: arrangement) {
             clearAndFlush {
                 arrangement = DomainUtils.refetchArrangement(arrangement)
@@ -1039,7 +1039,7 @@ class BasicOperationsService {
     }
 
     @SuppressWarnings("GroovyUnusedDeclaration")
-    public void persistAll(Event e, Arrangement a) {
+    void persistAll(Event e, Arrangement a) {
         mustHave(Event: (e), Arrangement: a) {
 
             if (e.namespace != a.namespace) {
@@ -1119,7 +1119,7 @@ class BasicOperationsService {
  * TODO - given that we have tracking links, should I remove the stuff that keeps the root in a draft state?
  */
 
-    public void persistNode(Event e, Node n) {
+    void persistNode(Event e, Node n) {
         mustHave(Event: (e), Node: n) {
             clearAndFlush {
                 e = DomainUtils.refetchEvent(e)
@@ -1177,13 +1177,13 @@ class BasicOperationsService {
 			''')
 
                     for (; ;) {
-                        step1.executeUpdate();
-                        step2.executeUpdate();
-                        step3.executeUpdate();
-                        step4.executeUpdate();
-                        int step5N = step5.executeUpdate();
+                        step1.executeUpdate()
+                        step2.executeUpdate()
+                        step3.executeUpdate()
+                        step4.executeUpdate()
+                        int step5N = step5.executeUpdate()
                         log.debug "found ${step5N} needing to be persisted"
-                        if (step5N == 0) break;
+                        if (step5N == 0) break
                     }
 
                     // every draft node under this node should belong to the same tree
@@ -1248,7 +1248,7 @@ class BasicOperationsService {
         }
     }
 
-    public Link adoptNode(Map params = [:], Node supernode, Node subnode, VersioningMethod versioningMethod) {
+    Link adoptNode(Map params = [:], Node supernode, Node subnode, VersioningMethod versioningMethod) {
         mustHave(supernode: supernode, subnode: subnode, versioningMethod: versioningMethod) {
             clearAndFlush {
                 supernode = DomainUtils.refetchNode(supernode)
@@ -1457,7 +1457,7 @@ class BasicOperationsService {
  * @return The checked-out node.
  */
 
-    public Node checkoutNode(Node supernode, Node targetnode) {
+    Node checkoutNode(Node supernode, Node targetnode) {
         mustHave(supernode: supernode, targetnode: targetnode) {
             clearAndFlush {
                 supernode = DomainUtils.refetchNode(supernode)
@@ -1765,8 +1765,8 @@ class BasicOperationsService {
  * @param supernode
  * @param targetNodes
  */
-    public void massCheckout(Node supernode, Collection<Node> targetNodes) {
-        mass_checkout_impl(supernode, targetNodes, false);
+    void massCheckout(Node supernode, Collection<Node> targetNodes) {
+        mass_checkout_impl(supernode, targetNodes, false)
     }
 
 /**
@@ -1778,8 +1778,8 @@ class BasicOperationsService {
  */
 
 
-    public void massCheckoutWithSubnodes(Node supernode, Collection<Node> targetNodes) {
-        mass_checkout_impl(supernode, targetNodes, true);
+    void massCheckoutWithSubnodes(Node supernode, Collection<Node> targetNodes) {
+        mass_checkout_impl(supernode, targetNodes, true)
 
     }
 
@@ -1791,7 +1791,7 @@ class BasicOperationsService {
     private void mass_checkout_impl(Node supernode, Collection<Node> targetNodes, boolean withSubnodes) {
         mustHave(supernode: supernode) {
             clearAndFlush {
-                if (!targetNodes) return;
+                if (!targetNodes) return
 
                 supernode = DomainUtils.refetchNode(supernode)
                 targetNodes = DomainUtils.refetchCollection(targetNodes)
@@ -1832,7 +1832,7 @@ class BasicOperationsService {
                     withQ cnct, 'insert into tree_temp_id2(id) select ?', { PreparedStatement stmt ->
                         targetNodes.each { Node targetNode ->
                             stmt.setLong(1, targetNode.id)
-                            stmt.executeUpdate();
+                            stmt.executeUpdate()
                         }
                     }
 
@@ -1870,7 +1870,7 @@ class BasicOperationsService {
                                 for (; ;) {
                                     ct = qry.executeUpdate()
                                     log.debug "found ${ct} superlinks"
-                                    if (ct == 0) break;
+                                    if (ct == 0) break
                                 }
                             }
 
@@ -2187,7 +2187,7 @@ select link_id from (
  * @return
  */
 
-    public void checkoutLink(Link link) {
+    void checkoutLink(Link link) {
         mustHave(link: link) {
             clearAndFlush {
                 link = DomainUtils.refetchLink(link)
@@ -2306,7 +2306,7 @@ select link_id from (
  * @param n A node that is a checked-out draft node
  * @return The original node.
  */
-    public Node undoCheckout(Node n) {
+    Node undoCheckout(Node n) {
         mustHave(Node: n) {
             clearAndFlush {
                 n = DomainUtils.refetchNode(n)
@@ -2359,7 +2359,7 @@ select link_id from (
  * @return
  */
 
-    public Integer moveFinalNodesFromTreeToTree(Arrangement from, Arrangement to) {
+    Integer moveFinalNodesFromTreeToTree(Arrangement from, Arrangement to) {
         mustHave(from: from, to: to) {
             clearAndFlush {
                 from = DomainUtils.refetchArrangement(from)
@@ -2383,7 +2383,7 @@ select link_id from (
  */
 
     @SuppressWarnings("GroovyUnusedDeclaration")
-    public Integer moveAllNodesFromTreeToTree(Arrangement from, Arrangement to) {
+    Integer moveAllNodesFromTreeToTree(Arrangement from, Arrangement to) {
         mustHave(from: from, to: to) {
             clearAndFlush {
                 from = DomainUtils.refetchArrangement(from)
@@ -2430,7 +2430,7 @@ select link_id from (
      * @param n
      */
 
-    public void createCopiesOfAllNonTreeNodes(Event e, Node n) {
+    void createCopiesOfAllNonTreeNodes(Event e, Node n) {
         mustHave(e: e, node: n) {
             // these messages are unhelpful to the user because we should not have gotten this far at all
             if(DomainUtils.isCheckedIn(n)) {
@@ -2611,7 +2611,7 @@ select link_id from (
     Move nodes from one tree to another starting from a given parent node.
      */
 
-    public void moveNodeSubtreeIntoArrangement(Arrangement from, Arrangement to, Node node) {
+    void moveNodeSubtreeIntoArrangement(Arrangement from, Arrangement to, Node node) {
         mustHave(from: from, to: to, node: node) {
             clearAndFlush {
                 from = DomainUtils.refetchArrangement(from)
@@ -2705,22 +2705,22 @@ where tree_node.id in (
 
     private clearAndFlush(Closure work) {
         if (sessionFactory_nsl.getCurrentSession().isDirty()) {
-            throw new IllegalStateException("Changes to the classification trees may only be done via BasicOperationsService");
+            throw new IllegalStateException("Changes to the classification trees may only be done via BasicOperationsService")
         }
-        sessionFactory_nsl.getCurrentSession().clear();
+        sessionFactory_nsl.getCurrentSession().clear()
         // I don't use a try/catch because if an exception is thrown then meh
-        Object ret = work();
-        sessionFactory_nsl.getCurrentSession().flush();
-        sessionFactory_nsl.getCurrentSession().clear();
-        return DomainUtils.refetchObject(ret);
+        Object ret = work()
+        sessionFactory_nsl.getCurrentSession().flush()
+        sessionFactory_nsl.getCurrentSession().clear()
+        return DomainUtils.refetchObject(ret)
     }
 
-    public void checkClassificationIntegrity(Arrangement a) throws ServiceException {
-        if(!a || a.arrangementType != ArrangementType.P) throw new IllegalArgumentException();
+    void checkClassificationIntegrity(Arrangement a) throws ServiceException {
+        if(!a || a.arrangementType != ArrangementType.P) throw new IllegalArgumentException()
 
         // every current node in a classification must have one and only one parent in the classification, except for the root node
 
-        Message msg = new Message(Msg.CLASSIFICATION_HAS_NODES_WITH_MULTIPLE_CURRENT_SUPERNODES, a);
+        Message msg = new Message(Msg.CLASSIFICATION_HAS_NODES_WITH_MULTIPLE_CURRENT_SUPERNODES, a)
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -2734,18 +2734,18 @@ and n.internal_type <> 'V'
 group by n.id
 having count(p.id) <> 1
 									''', { PreparedStatement qry ->
-                qry.setLong(1, a.id);
-                ResultSet rs = qry.executeQuery();
+                qry.setLong(1, a.id)
+                ResultSet rs = qry.executeQuery()
                 while (rs.next() && msg.nested.size() < 20) {
-                    Node node = Node.get(rs.getLong(1));
-                    List<?> args = [node, node?.name];
+                    Node node = Node.get(rs.getLong(1))
+                    List<?> args = [node, node?.name]
 
-                    msg.nested.add(new Message(Msg.CLASSIFICATION_NODE_WITH_MULTIPLE_CURRENT_SUPERNODES, args));
+                    msg.nested.add(new Message(Msg.CLASSIFICATION_NODE_WITH_MULTIPLE_CURRENT_SUPERNODES, args))
                 }
             }
 
             if (!msg.nested.isEmpty()) {
-                throw new ServiceException(msg);
+                throw new ServiceException(msg)
             }
         }
 

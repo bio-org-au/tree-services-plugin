@@ -33,35 +33,34 @@ class TreeTestUtil {
         Namespace n = Namespace.findByName('TREETEST')
         if(!n) {
             n = new Namespace(name: 'TREETEST', descriptionHtml: 'Tree Services Plugin integration tests')
-            n.save();
+            n.save()
         }
-        return n;
+        return n
     }
 }
 
 class BuildSampleTreeMixin {
 
-
     SomeStuff makeSampleTree() {
-        SomeStuff s = new SomeStuff(sessionFactory_nsl, basicOperationsService)
+        SomeStuff s = new SomeStuff((SessionFactory)sessionFactory_nsl, (BasicOperationsService)basicOperationsService)
         s.makeTree()
         return s
     }
 
     SomeStuffWithHistory makeSampleTreeWithHistory() {
-        SomeStuffWithHistory s = new SomeStuffWithHistory(sessionFactory_nsl, basicOperationsService)
+        SomeStuffWithHistory s = new SomeStuffWithHistory((SessionFactory)sessionFactory_nsl, (BasicOperationsService)basicOperationsService)
         s.makeTree()
         return s
     }
 
     SomeStuffEmptyTree makeSampleEmptyTree() {
-        SomeStuffEmptyTree s = new SomeStuffEmptyTree(sessionFactory_nsl, basicOperationsService)
+        SomeStuffEmptyTree s = new SomeStuffEmptyTree((SessionFactory)sessionFactory_nsl, (BasicOperationsService)basicOperationsService)
         s.makeTree()
         return s
     }
 
     void dumpStuff(List stuff) {
-        BuildSampleTreeUtil.dumpStuff(sessionFactory_nsl, log, stuff)
+        BuildSampleTreeUtil.dumpStuff((SessionFactory)sessionFactory_nsl, (Log)log, stuff)
     }
 }
 
@@ -88,6 +87,7 @@ class BuildSampleTreeUtil {
 							from tree_node n where n.tree_arrangement_id = ${arrId}
 							order by n.tree_arrangement_id""", { PreparedStatement qry ->
                     ResultSet rs = qry.executeQuery()
+                    //noinspection ChangeToOperator
                     while (rs.next()) {
                         log.debug("\t${rs.getLong(1)} [" //
                                 + (rs.getObject(7) == null ? "" : " style=\"dotted\"")
@@ -108,6 +108,7 @@ class BuildSampleTreeUtil {
 
                 HibernateSessionUtils.withQ cnct, "select l.supernode_id, l.subnode_id, l.link_seq, l.id from tree_link l, tree_node n where n.id = l.supernode_id and n.tree_arrangement_id = ${arrId}", { PreparedStatement qry ->
                     ResultSet rs = qry.executeQuery()
+                    //noinspection ChangeToOperator
                     while (rs.next()) {
                         log.debug("${rs.getLong(1)} -> ${rs.getLong(2)} [taillabel=\"${rs.getInt(3)}\", label=\"${rs.getLong(4)}\", ];")
                     }
@@ -117,6 +118,7 @@ class BuildSampleTreeUtil {
                     arrId
                 } and n.PREV_NODE_ID is not null""", { PreparedStatement qry ->
                     ResultSet rs = qry.executeQuery()
+                    //noinspection ChangeToOperator
                     while (rs.next()) {
                         log.debug("${rs.getLong(2)} -> ${rs.getLong(1)} [style=\"dotted\", constraint=\"false\"];")
                     }
@@ -128,6 +130,7 @@ class BuildSampleTreeUtil {
 						and n.NEXT_NODE_ID is not null
 						""", { PreparedStatement qry ->
                     ResultSet rs = qry.executeQuery()
+                    //noinspection ChangeToOperator
                     while (rs.next()) {
                         log.debug("${rs.getLong(1)} -> ${rs.getLong(2)} [style=\"dashed\" ${rs.getLong(2) == 0 ? '' : ', constraint=\"false\"'}];")
                     }
@@ -271,6 +274,6 @@ class SomeStuffWithHistory extends SomeStuff {
     void reloadWithoutClear() {
         super.reloadWithoutClear()
         startRoot = Node.get(startRootId)
-        startRoot.refresh();
+        startRoot.refresh()
     }
 }

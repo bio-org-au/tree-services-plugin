@@ -35,7 +35,7 @@ class QueryService {
     SessionFactory sessionFactory_nsl
     ProxyHandler proxyHandler
 
-    public static class Statistics {
+    static class Statistics {
         public int nodesCt
         public int currentNodesCt
         public int typesCt
@@ -49,7 +49,7 @@ class QueryService {
     }
 
 
-    public Statistics getStatistics(Arrangement r) {
+    Statistics getStatistics(Arrangement r) {
         return doWork(sessionFactory_nsl, { Connection cnct ->
             final Statistics s = new Statistics()
 
@@ -122,7 +122,7 @@ class QueryService {
         }) as Statistics
     }
 
-    public Statistics getDependencies(Arrangement r) {
+    Statistics getDependencies(Arrangement r) {
         return doWork(sessionFactory_nsl, { Connection cnct ->
             final Statistics s = new Statistics()
             get_dependencies r, s, cnct
@@ -165,11 +165,11 @@ class QueryService {
         }
     }
 
-    public void dumpTrees(Node tree1, Node tree2) {
+    void dumpTrees(Node tree1, Node tree2) {
         log.info dumpNodes([tree1, tree2])
     }
 
-    public String dumpNodes(Collection<Node> topNodes) {
+    String dumpNodes(Collection<Node> topNodes) {
 
         StringWriter out = new StringWriter()
         doWork sessionFactory_nsl, { Connection cnct ->
@@ -391,7 +391,7 @@ class QueryService {
                 break
             }
         }
-        return path;
+        return path
     }
 
     Long getNextval() {
@@ -555,7 +555,7 @@ and subnode.next is null
 
     // this query returns the relationship instances where instance.hasSynonym foo
     List<Instance> findSynonymsOfInstanceInTree(Arrangement tree, Instance instance) {
-        List<Instance> l = new ArrayList<Instance>();
+        List<Instance> l = new ArrayList<Instance>()
 
         doWork sessionFactory_nsl, { Connection cnct ->
             withQ cnct, '''
@@ -579,13 +579,13 @@ walk as (
 select distinct relationship_instance_id from walk where tree_arrangement_id = ?
 
             ''', { PreparedStatement qry ->
-                qry.setLong(1, instance.id);
-                qry.setLong(2, tree.id);
-                qry.setLong(3, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
-                qry.setLong(4, tree.id);
-                qry.setLong(5, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
-                qry.setLong(6, tree.id);
-                qry.setLong(7, tree.id);
+                qry.setLong(1, instance.id)
+                qry.setLong(2, tree.id)
+                qry.setLong(3, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id)
+                qry.setLong(4, tree.id)
+                qry.setLong(5, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id)
+                qry.setLong(6, tree.id)
+                qry.setLong(7, tree.id)
 
 
                 ResultSet rs = qry.executeQuery()
@@ -599,7 +599,7 @@ select distinct relationship_instance_id from walk where tree_arrangement_id = ?
     }
 
     List<Instance> findInstancesHavingSynonymInTree(Arrangement tree, Instance instance) {
-        List<Instance> l = new ArrayList<Instance>();
+        List<Instance> l = new ArrayList<Instance>()
 
         doWork sessionFactory_nsl, { Connection cnct ->
             withQ cnct, '''
@@ -624,13 +624,13 @@ walk as (
 select distinct relationship_instance_id from walk where tree_arrangement_id = ?
 
             ''', { PreparedStatement qry ->
-                qry.setLong(1, instance.id);
-                qry.setLong(2, tree.id);
-                qry.setLong(3, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
-                qry.setLong(4, tree.id);
-                qry.setLong(5, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id);
-                qry.setLong(6, tree.id);
-                qry.setLong(7, tree.id);
+                qry.setLong(1, instance.id)
+                qry.setLong(2, tree.id)
+                qry.setLong(3, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id)
+                qry.setLong(4, tree.id)
+                qry.setLong(5, tree.baseArrangement == null ? tree.id : tree.baseArrangement.id)
+                qry.setLong(6, tree.id)
+                qry.setLong(7, tree.id)
 
 
                 ResultSet rs = qry.executeQuery()
@@ -645,7 +645,7 @@ select distinct relationship_instance_id from walk where tree_arrangement_id = ?
 
 
     List findNamesInSubtree(Node node, String nameLike) {
-        List l = [];
+        List l = []
 
         doWork sessionFactory_nsl, { Connection cnct ->
 
@@ -691,19 +691,19 @@ from tree_runner
 where tree_runner.running_node_id = ?
 			''', { PreparedStatement sql ->
                 if (node.root.baseArrangement) {
-                    sql.setString(1, nameLike);
-                    sql.setLong(2, node.root.id);
-                    sql.setLong(3, node.root.baseArrangement.id);
-                    sql.setLong(4, node.root.id);
-                    sql.setLong(5, node.root.baseArrangement.id);
-                    sql.setLong(6, node.id);
-                    sql.setLong(7, node.id);
+                    sql.setString(1, nameLike)
+                    sql.setLong(2, node.root.id)
+                    sql.setLong(3, node.root.baseArrangement.id)
+                    sql.setLong(4, node.root.id)
+                    sql.setLong(5, node.root.baseArrangement.id)
+                    sql.setLong(6, node.id)
+                    sql.setLong(7, node.id)
                 } else {
-                    sql.setString(1, nameLike);
-                    sql.setLong(2, node.root.id);
-                    sql.setLong(3, node.root.id);
-                    sql.setLong(4, node.id);
-                    sql.setLong(5, node.id);
+                    sql.setString(1, nameLike)
+                    sql.setLong(2, node.root.id)
+                    sql.setLong(3, node.root.id)
+                    sql.setLong(4, node.id)
+                    sql.setLong(5, node.id)
                 }
                 ResultSet rs = sql.executeQuery()
                 try {
@@ -720,7 +720,7 @@ where tree_runner.running_node_id = ?
             }
         }
 
-        return l;
+        return l
 
     }
 
@@ -734,7 +734,7 @@ where tree_runner.running_node_id = ?
          * into doing it the right way.
          */
 
-        List l = [];
+        List l = []
 
         doWork sessionFactory_nsl, { Connection cnct ->
 
@@ -780,19 +780,19 @@ from tree_runner
 where tree_runner.running_node_id = ?
 			''', { PreparedStatement sql ->
                 if (node.root.baseArrangement) {
-                    sql.setString(1, nameLike);
-                    sql.setLong(2, node.root.id);
-                    sql.setLong(3, node.root.baseArrangement.id);
-                    sql.setLong(4, node.root.id);
-                    sql.setLong(5, node.root.baseArrangement.id);
-                    sql.setLong(6, node.id);
-                    sql.setLong(7, node.id);
+                    sql.setString(1, nameLike)
+                    sql.setLong(2, node.root.id)
+                    sql.setLong(3, node.root.baseArrangement.id)
+                    sql.setLong(4, node.root.id)
+                    sql.setLong(5, node.root.baseArrangement.id)
+                    sql.setLong(6, node.id)
+                    sql.setLong(7, node.id)
                 } else {
-                    sql.setString(1, nameLike);
-                    sql.setLong(2, node.root.id);
-                    sql.setLong(3, node.root.id);
-                    sql.setLong(4, node.id);
-                    sql.setLong(5, node.id);
+                    sql.setString(1, nameLike)
+                    sql.setLong(2, node.root.id)
+                    sql.setLong(3, node.root.id)
+                    sql.setLong(4, node.id)
+                    sql.setLong(5, node.id)
                 }
                 ResultSet rs = sql.executeQuery()
                 try {
@@ -809,7 +809,7 @@ where tree_runner.running_node_id = ?
             }
         }
 
-        return l;
+        return l
 
     }
 
@@ -877,10 +877,10 @@ select distinct start_id from ll where supernode_id = ?
 
     int countPaths(Node root, Node focus) {
         try {
-            if (root == null || focus == null) return 0;
-            if (root == focus) return 1;
+            if (root == null || focus == null) return 0
+            if (root == focus) return 1
 
-            int ct;
+            int ct
 
             doWork(sessionFactory_nsl) { Connection cnct ->
                 withQ cnct, '''
@@ -906,11 +906,11 @@ select distinct start_id from ll where supernode_id = ?
 
                         }
             }
-            return ct;
+            return ct
         }
         catch (Exception e) {
-            e.printStackTrace();
-            throw e;
+            e.printStackTrace()
+            throw e
         }
     }
 
@@ -977,7 +977,7 @@ select distinct start_id from ll where supernode_id = ?
     }
 
     List<Node> findPath(Node root, Node focus) {
-        List<Node> l = new ArrayList<Node>();
+        List<Node> l = new ArrayList<Node>()
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -1003,7 +1003,7 @@ select distinct start_id from ll where supernode_id = ?
                         try {
                             while (rs.next()) {
 
-                                l.add(Node.get(rs.getLong(1)));
+                                l.add(Node.get(rs.getLong(1)))
                             }
                         }
                         finally {
@@ -1013,14 +1013,14 @@ select distinct start_id from ll where supernode_id = ?
                     }
         }
 
-        return l;
+        return l
     }
 
     List<Link> findPathLinks(Node root, Node focus) {
-        if (!root) throw new IllegalArgumentException("root is null");
-        if (!focus) throw new IllegalArgumentException("focus is null");
+        if (!root) throw new IllegalArgumentException("root is null")
+        if (!focus) throw new IllegalArgumentException("focus is null")
 
-        List<Link> l = new ArrayList<Node>();
+        List<Link> l = new ArrayList<Node>()
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -1045,7 +1045,7 @@ select distinct start_id from ll where supernode_id = ?
 
                         try {
                             while (rs.next()) {
-                                l.add(Link.get(rs.getLong('id')));
+                                l.add(Link.get(rs.getLong('id')))
                             }
                         }
                         finally {
@@ -1054,14 +1054,14 @@ select distinct start_id from ll where supernode_id = ?
                     }
         }
 
-        return l;
+        return l
     }
 
     int countDraftNodes(Node focus) {
         try {
-            if (focus == null) return 0;
+            if (focus == null) return 0
 
-            int ct;
+            int ct
 
             doWork(sessionFactory_nsl) { Connection cnct ->
                 withQ cnct, '''
@@ -1087,11 +1087,11 @@ select distinct start_id from ll where supernode_id = ?
 
                         }
             }
-            return ct;
+            return ct
         }
         catch (Exception e) {
-            e.printStackTrace();
-            throw e;
+            e.printStackTrace()
+            throw e
         }
     }
 
@@ -1106,7 +1106,7 @@ select distinct start_id from ll where supernode_id = ?
     List findDifferences(Node n1, Node n2) {
         log.debug("differences between ${n1} and ${n2}")
 
-        List l = [];
+        List l = []
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -1162,20 +1162,20 @@ select distinct start_id from ll where supernode_id = ?
                         log.debug("got the resultset")
                         try {
                             while (rs.next()) {
-                                Name n = Name.get(rs.getLong('name_id'));
-                                Node nn1 = Node.get(rs.getLong('subnode_1'));
-                                if (rs.wasNull()) nn1 = null;
-                                Node nn2 = Node.get(rs.getLong('subnode_2'));
-                                if (rs.wasNull()) nn2 = null;
-                                Link l1 = Link.get(rs.getLong('link_1'));
-                                if (rs.wasNull()) l1 = null;
-                                Link l2 = Link.get(rs.getLong('link_2'));
-                                if (rs.wasNull()) l2 = null;
+                                Name n = Name.get(rs.getLong('name_id'))
+                                Node nn1 = Node.get(rs.getLong('subnode_1'))
+                                if (rs.wasNull()) nn1 = null
+                                Node nn2 = Node.get(rs.getLong('subnode_2'))
+                                if (rs.wasNull()) nn2 = null
+                                Link l1 = Link.get(rs.getLong('link_1'))
+                                if (rs.wasNull()) l1 = null
+                                Link l2 = Link.get(rs.getLong('link_2'))
+                                if (rs.wasNull()) l2 = null
 
-                                log.debug("${n.fullName} ${nn1} ${l1} ${nn2} ${l2}");
+                                log.debug("${n.fullName} ${nn1} ${l1} ${nn2} ${l2}")
 
                                 if (l1 != null && l2 != null && l1.id == l2.id) {
-                                    log.debug("just part of a common subtree");
+                                    log.debug("just part of a common subtree")
                                 }
 
                                 assert nn1 != null || nn2 != null
@@ -1183,32 +1183,32 @@ select distinct start_id from ll where supernode_id = ?
                                 boolean placement_changed =
                                         ((nn1 == null) != (nn2 == null)) ||
                                                 ((l1 == null) != (l2 == null)) ||
-                                                (l1 != null && l2 != null && l1.supernode.name?.id != l2.supernode.name?.id);
+                                                (l1 != null && l2 != null && l1.supernode.name?.id != l2.supernode.name?.id)
 
                                 if (!placement_changed && nn1.id == nn2.id) {
                                     log.debug("same node under same name name. Continuing.")
-                                    continue;
+                                    continue
                                 }
 
-                                List<String> changes = new ArrayList<String>();
+                                List<String> changes = new ArrayList<String>()
 
                                 if (placement_changed) {
                                     if (nn1 == null && nn2 != null) {
                                         if (l2 == null)
-                                            changes.add("New placement");
+                                            changes.add("New placement")
                                         else
-                                            changes.add("New placement under ${l2.supernode.name.fullName}");
+                                            changes.add("New placement under ${l2.supernode.name.fullName}")
                                     } else if (nn1 != null && nn2 == null) {
                                         if (l2 == null)
-                                            changes.add("Name removed");
+                                            changes.add("Name removed")
                                         else
-                                            changes.add("Name removed from ${l1.supernode.name.fullName}");
+                                            changes.add("Name removed from ${l1.supernode.name.fullName}")
                                     } else if (l1 == null && l2 != null) {
-                                        changes.add("Name moved from root to ${l2.supernode.name.fullName}");
+                                        changes.add("Name moved from root to ${l2.supernode.name.fullName}")
                                     } else if (l1 != null && l == null) {
-                                        changes.add("Name moved from ${l1.supernode.name.fullName} to root");
+                                        changes.add("Name moved from ${l1.supernode.name.fullName} to root")
                                     } else {
-                                        changes.add("Name moved from ${l1.supernode.name.fullName} to ${l2.supernode.name.fullName} ");
+                                        changes.add("Name moved from ${l1.supernode.name.fullName} to ${l2.supernode.name.fullName} ")
                                     }
                                 }
 
@@ -1221,22 +1221,22 @@ select distinct start_id from ll where supernode_id = ?
                                         changes.add("type changed from ${nn1.typeUriIdPart} to ${nn2.typeUriIdPart}")
                                     }
 
-                                    Map<Uri, Link> pp1 = DomainUtils.getProfileItemsAsMap(nn1);
-                                    Map<Uri, Link> pp2 = DomainUtils.getProfileItemsAsMap(nn2);
+                                    Map<Uri, Link> pp1 = DomainUtils.getProfileItemsAsMap(nn1)
+                                    Map<Uri, Link> pp2 = DomainUtils.getProfileItemsAsMap(nn2)
 
-                                    Set<Uri> items = new HashSet<Uri>();
-                                    items.addAll(pp1.keySet());
-                                    items.addAll(pp2.keySet());
+                                    Set<Uri> items = new HashSet<Uri>()
+                                    items.addAll(pp1.keySet())
+                                    items.addAll(pp2.keySet())
 
                                     for (Uri u : items) {
                                         if (pp1.containsKey(u) && pp2.containsKey(u)) {
                                             if (pp1.get(u).subnode.literal != pp2.get(u).subnode.literal) {
-                                                changes.add("Profile item ${DomainUtils.vnuForItem(pp1.get(u))?.title ?: u} changed");
+                                                changes.add("Profile item ${DomainUtils.vnuForItem(pp1.get(u))?.title ?: u} changed")
                                             }
                                         } else if (!pp1.containsKey(u)) {
-                                            changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} added");
+                                            changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} added")
                                         } else if (!pp2.containsKey(u)) {
-                                            changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} removed");
+                                            changes.add("Profile item ${DomainUtils.vnuForItem(pp2.get(u))?.title ?: u} removed")
 
                                         }
                                     }
@@ -1260,133 +1260,129 @@ select distinct start_id from ll where supernode_id = ?
                     }
         }
 
-        return l;
+        return l
     }
 
     // This method returns a branch object. A branch object contains a top node, its placements, and its entire subnode tree.
 
-    public static class Tree {
+    static class Tree {
 
-        public class Placement {
-            public final Node node;
-            public final Link link;
+        class Placement {
+            public final Node node
+            public final Link link
 
             Placement(Link link) {
-                this.link = link;
+                this.link = link
 
                 if (link) {
-                    this.node = link.supernode;
+                    this.node = link.supernode
                 } else {
-                    this.node = null;
+                    this.node = null
                 }
-                map_apni_names(node);
+                map_apni_names(node)
             }
         }
 
-        public class Branch {
-            public final Node node;
-            public final Link link;
-            public final Branch[] subnodes;
-            public final int subnodesCount;
-            public final boolean branchTruncated;
-
-            Branch(Link link, int trunctateCount) {
-                this(link, link.subnode, trunctateCount);
-            }
+        class Branch {
+            public final Node node
+            public final Link link
+            public final Branch[] subnodes
+            public final int subnodesCount
+            public final boolean branchTruncated
 
             Branch(Link link, Node node, int trunctateCount) {
-                this.link = link;
-                this.node = node;
+                this.link = link
+                this.node = node
 
-                this.subnodesCount = node.subLink.size();
+                this.subnodesCount = node.subLink.size()
 
-                int nonterminalSublinks = 0;
+                int nonterminalSublinks = 0
                 node.subLink.each {
                     if (!it.subnode.subLink.isEmpty()) {
-                        nonterminalSublinks++;
+                        nonterminalSublinks++
                     }
                 }
 
                 if (nonterminalSublinks != 0 && trunctateCount == 0) {
-                    branchTruncated = true;
-                    subnodes = null;
+                    branchTruncated = true
+                    subnodes = null
                 } else {
-                    branchTruncated = false;
+                    branchTruncated = false
 
-                    List<Branch> bb = new ArrayList<Branch>(node.subLink.size());
+                    List<Branch> bb = new ArrayList<Branch>(node.subLink.size())
                     node.subLink.each {
                         // the effect of this will be that if a branch has only one subnode, then
                         // it will be followed down at least until it splits.
-                        bb.add(new Branch(it, (int) (trunctateCount / (nonterminalSublinks + 1))));
+                        bb.add(new Branch(it, it.subnode, (int) (trunctateCount / (nonterminalSublinks + 1))))
                     }
                     bb.sort { Branch a, Branch b -> return (b.link?.linkSeq ?: 0) - (a.link?.linkSeq ?: 0) }
 
                     // it's rubbish that I have to do this
-                    this.subnodes = new Branch[bb.size()];
+                    this.subnodes = new Branch[bb.size()]
                     for (int i = 0; i < bb.size(); i++) {
-                        this.subnodes[i] = bb.get(i);
+                        this.subnodes[i] = bb.get(i)
                     }
                 }
 
-                map_apni_names(node);
+                map_apni_names(node)
             }
         }
 
-        public final Branch branch;
-        public final List<Placement> placements = [];
-        public final LinkedList<Node> prev = new LinkedList<Node>();
-        public final LinkedList<Node> next = new LinkedList<Node>();
-        public final ArrayList<Node> copies = new ArrayList<Node>();
-        public final ArrayList<Node> merges = new ArrayList<Node>();
-        public final Collection<ArrayList<PlacementSpan>> paths = new ArrayList<ArrayList<PlacementSpan>>();
-        public final Map<Long, Name> nameUriMap = new HashMap<Long, Name>();
-        public final Map<Long, Instance> instanceUriMap = new HashMap<Long, Instance>();
+        public final Branch branch
+        public final List<Placement> placements = []
+        public final LinkedList<Node> prev = new LinkedList<Node>()
+        public final LinkedList<Node> next = new LinkedList<Node>()
+        public final ArrayList<Node> copies = new ArrayList<Node>()
+        public final ArrayList<Node> merges = new ArrayList<Node>()
+        public final Collection<ArrayList<PlacementSpan>> paths = new ArrayList<ArrayList<PlacementSpan>>()
+        public final Map<Long, Name> nameUriMap = new HashMap<Long, Name>()
+        public final Map<Long, Instance> instanceUriMap = new HashMap<Long, Instance>()
 
         Tree(Node node) {
-            this.branch = new Branch(null, node, 500); // an arbitrary cutoff. I should make this a config parameter
+            this.branch = new Branch(null, node, 500) // an arbitrary cutoff. I should make this a config parameter
             node.supLink.each { placements.add(new Placement(it)) }
 
             if (!DomainUtils.isEndNode(node))
-                paths.addAll(getPlacementPaths(node));
+                paths.addAll(getPlacementPaths(node))
 
             for (Node n = node.prev; n; n = n.prev) {
-                prev.addFirst(n);
+                prev.addFirst(n)
                 if (!DomainUtils.isEndNode(n))
-                    paths.addAll(getPlacementPaths(n));
+                    paths.addAll(getPlacementPaths(n))
             }
             for (Node n = node.next; n; n = n.next) {
-                next.addLast(n);
+                next.addLast(n)
                 if (!DomainUtils.isEndNode(n))
-                    paths.addAll(getPlacementPaths(n));
+                    paths.addAll(getPlacementPaths(n))
             }
 
-            mergePaths(paths);
+            mergePaths(paths)
 
             paths.sort { ArrayList<PlacementSpan> a, ArrayList<PlacementSpan> b ->
-                if (a == b) return 0;
-                if (!a && !b) return 0;
-                if (!a) return -1;
-                if (!b) return 1;
+                if (a == b) return 0
+                if (!a && !b) return 0
+                if (!a) return -1
+                if (!b) return 1
 
-                Node a_node = a.get(0).from.supernode;
-                Node b_node = b.get(0).from.supernode;
+                Node a_node = a.get(0).from.supernode
+                Node b_node = b.get(0).from.supernode
 
                 if (a_node.root.id != b_node.root.id) {
                     return a_node.root.id - b_node.root.id
                 }
 
-                if (!a_node.checkedInAt && !b_node) return 0;
-                if (!a_node.checkedInAt) return 1;
-                if (!b_node.checkedInAt) return -1;
+                if (!a_node.checkedInAt && !b_node) return 0
+                if (!a_node.checkedInAt) return 1
+                if (!b_node.checkedInAt) return -1
 
-                return a_node.checkedInAt.timeStamp.compareTo(b_node.checkedInAt.timeStamp);
+                return a_node.checkedInAt.timeStamp.compareTo(b_node.checkedInAt.timeStamp)
 
             }
 
 
             for (Node n : node.branches) {
                 if (n.id != node.next?.id) {
-                    copies.add(n);
+                    copies.add(n)
                 }
             }
 
@@ -1394,7 +1390,7 @@ select distinct start_id from ll where supernode_id = ?
 
             for (Node n : node.merges) {
                 if (n.id != node.prev?.id) {
-                    merges.add(n);
+                    merges.add(n)
                 }
             }
 
@@ -1402,96 +1398,96 @@ select distinct start_id from ll where supernode_id = ?
 
 
             placements.each {
-                map_apni_names(it.node);
+                map_apni_names(it.node)
             }
             prev.each {
-                map_apni_names(it);
+                map_apni_names(it)
             }
             next.each {
-                map_apni_names(it);
+                map_apni_names(it)
             }
             copies.each {
-                map_apni_names(it);
+                map_apni_names(it)
             }
             merges.each {
-                map_apni_names(it);
+                map_apni_names(it)
             }
             paths.each {
                 it.each { PlacementSpan span ->
-                    map_apni_names(span.from.supernode);
-                    map_apni_names(span.from.subnode);
-                    map_apni_names(span.to.supernode);
-                    map_apni_names(span.to.subnode);
+                    map_apni_names(span.from.supernode)
+                    map_apni_names(span.from.subnode)
+                    map_apni_names(span.to.supernode)
+                    map_apni_names(span.to.subnode)
                 }
             }
         }
 
 
         void map_apni_names(Node node) {
-            if (!node) return;
-            Name resolvedName = resolveName(node);
+            if (!node) return
+            Name resolvedName = resolveName(node)
             if (resolvedName) {
-                nameUriMap.put(DomainUtils.getNameUri(node).asUri(), resolvedName);
+                nameUriMap.put(DomainUtils.getNameUri(node).asUri(), resolvedName)
             }
 
-            Instance resolvedInstance = resolveInstance(node);
+            Instance resolvedInstance = resolveInstance(node)
             if (resolvedInstance) {
-                instanceUriMap.put(DomainUtils.getTaxonUri(node).asUri(), resolvedInstance);
+                instanceUriMap.put(DomainUtils.getTaxonUri(node).asUri(), resolvedInstance)
             }
         }
     }
 
     Tree getTree(Node node) {
-        Tree t = new Tree(node);
-        return t;
+        Tree t = new Tree(node)
+        return t
     }
 
-    public static class NodePair {
-        public final Node prev;
-        public final Node next;
+    static class NodePair {
+        public final Node prev
+        public final Node next
 
-        NodePair(Node prev, Node next) { this.prev = prev; this.next = next; }
+        NodePair(Node prev, Node next) { this.prev = prev; this.next = next }
     }
 
     static Name resolveName(Node node) {
-        if (!node) return null;
-        if (node.name) return node.name;
-        if (!node.nameUriNsPart || !node.nameUriIdPart) return null;
-        if (node.nameUriNsPart.label == 'nsl-name') return Name.get(node.nameUriIdPart as Long);
-        if (node.nameUriNsPart.label == 'apni-name') return Name.findByNamespaceAndSourceSystemAndSourceId(node.root.namespace, 'PLANT_NAME', node.nameUriIdPart as Long);
-        return null;
+        if (!node) return null
+        if (node.name) return node.name
+        if (!node.nameUriNsPart || !node.nameUriIdPart) return null
+        if (node.nameUriNsPart.label == 'nsl-name') return Name.get(node.nameUriIdPart as Long)
+        if (node.nameUriNsPart.label == 'apni-name') return Name.findByNamespaceAndSourceSystemAndSourceId(node.root.namespace, 'PLANT_NAME', node.nameUriIdPart as Long)
+        return null
     }
 
     static Instance resolveInstance(Node node) {
-        if (!node) return null;
-        if (node.instance) return node.instance;
-        if (!node.taxonUriNsPart || !node.taxonUriIdPart) return null;
-        if (node.taxonUriNsPart.label == 'nsl-instance') return Instance.get(node.taxonUriIdPart as Long);
+        if (!node) return null
+        if (node.instance) return node.instance
+        if (!node.taxonUriNsPart || !node.taxonUriIdPart) return null
+        if (node.taxonUriNsPart.label == 'nsl-instance') return Instance.get(node.taxonUriIdPart as Long)
         if (node.taxonUriNsPart.label == 'apni-taxon') return Instance.findByNamespaceAndSourceSystemAndSourceId(node.root.namespace, 'PLANT_NAME_REFERENCE', node.taxonUriIdPart as Long)
-        return null;
+        return null
     }
 
     private static int sortEventsByTime(Event a, Event b) {
-        Timestamp ts_a = a?.timeStamp;
-        Timestamp ts_b = b?.timeStamp;
+        Timestamp ts_a = a?.timeStamp
+        Timestamp ts_b = b?.timeStamp
 
-        if (!ts_b && !ts_a) return 0;
-        if (ts_b && !ts_a) return 1;
-        if (!ts_b && ts_a) return -1;
-        return ts_a.compareTo(ts_b);
+        if (!ts_b && !ts_a) return 0
+        if (ts_b && !ts_a) return 1
+        if (!ts_b && ts_a) return -1
+        return ts_a.compareTo(ts_b)
     }
 
     static class PlacementSpan {
-        Link from;
-        Link to;
+        Link from
+        Link to
 
         PlacementSpan(Link from, Link to) {
-            this.from = from;
-            this.to = to;
+            this.from = from
+            this.to = to
         }
 
-        public String toString() {
-            return "${from.supernode.id}-${to.supernode.id}->${from.subnode.id}-${to.subnode.id}";
+        String toString() {
+            return "${from.supernode.id}-${to.supernode.id}->${from.subnode.id}-${to.subnode.id}"
         }
     }
 
@@ -1502,29 +1498,29 @@ select distinct start_id from ll where supernode_id = ?
 
     static Collection<ArrayList<PlacementSpan>> getPlacementPaths(Node n) {
 
-        Collection<ArrayList<PlacementSpan>> paths = new HashSet<ArrayList<PlacementSpan>>();
+        Collection<ArrayList<PlacementSpan>> paths = new HashSet<ArrayList<PlacementSpan>>()
 
         // TODO: arrange something more formal with respect to the fact that we don't go higher than the root
         if (n == null || n.supLink.isEmpty() || n.internalType == NodeInternalType.S || n.typeUriIdPart == 'classification-root') {
-            return paths;
+            return paths
         }
 
         for (Link l : n.supLink) {
-            Collection<ArrayList<PlacementSpan>> linkspans = getPlacementPaths(l.supernode);
+            Collection<ArrayList<PlacementSpan>> linkspans = getPlacementPaths(l.supernode)
 
             if (linkspans.isEmpty()) {
-                linkspans.add(new ArrayList<PlacementSpan>());
+                linkspans.add(new ArrayList<PlacementSpan>())
             }
 
             for (ArrayList<PlacementSpan> linkspan_path : linkspans) {
-                linkspan_path.add(new PlacementSpan(l, l));
+                linkspan_path.add(new PlacementSpan(l, l))
             }
-            paths.addAll(linkspans);
+            paths.addAll(linkspans)
         }
 
-        mergePaths(paths);
+        mergePaths(paths)
 
-        return paths;
+        return paths
     }
 
     static void mergePaths(Collection<ArrayList<PlacementSpan>> paths) {
@@ -1533,57 +1529,57 @@ select distinct start_id from ll where supernode_id = ?
             for (ArrayList<PlacementSpan> a : paths) {
                 look_for_next_pair:
                 for (ArrayList<PlacementSpan> b : paths) {
-                    if (a == b) continue;
-                    if (a.size() != b.size()) continue;
+                    if (a == b) continue
+                    if (a.size() != b.size()) continue
                     for (int i = 0; i < a.size(); i++) {
-                        PlacementSpan aa = a.get(i);
-                        PlacementSpan bb = b.get(i);
+                        PlacementSpan aa = a.get(i)
+                        PlacementSpan bb = b.get(i)
 
                         /* We only look at the supernode. This is ok, because the subnode of the final link of all paths will always be node n */
 
-                        if (aa.to.supernode.id != bb.from.supernode.prev?.id) continue look_for_next_pair;
-                        if (!nodesLookTheSame(aa.to.supernode, bb.from.supernode)) continue look_for_next_pair;
-                        if (!linksLookTheSame(aa.to, bb.from)) continue look_for_next_pair;
+                        if (aa.to.supernode.id != bb.from.supernode.prev?.id) continue look_for_next_pair
+                        if (!nodesLookTheSame(aa.to.supernode, bb.from.supernode)) continue look_for_next_pair
+                        if (!linksLookTheSame(aa.to, bb.from)) continue look_for_next_pair
                     }
                     // right! we need to do a merge of b into a.
 
                     for (int i = 0; i < a.size(); i++) {
-                        PlacementSpan aa = a.get(i);
-                        PlacementSpan bb = b.get(i);
-                        aa.to = bb.to;
+                        PlacementSpan aa = a.get(i)
+                        PlacementSpan bb = b.get(i)
+                        aa.to = bb.to
                     }
-                    paths.remove(b);
+                    paths.remove(b)
 
                     /* and this will mess up the iterators, so restart the whole thing
                     yes, it's a load. but getting it right is a lot of code. Consider what happens when
                     we merge paths in the middle of a big sequence of paths needing to be merged.
                     */
-                    continue look_for_more_merges;
+                    continue look_for_more_merges
                 }
             }
 
-            break look_for_more_merges;
+            break look_for_more_merges
         }
     }
 
     private static boolean nodesLookTheSame(Node n1, Node n2) {
-        if (n1 == null && n2 == null) return true;
-        if (n1 == null || n2 == null) return false;
+        if (n1 == null && n2 == null) return true
+        if (n1 == null || n2 == null) return false
 
         return uriSame(n1.typeUriNsPart, n1.typeUriIdPart, n2.typeUriNsPart, n2.typeUriIdPart) &&
                 uriSame(n1.nameUriNsPart, n1.nameUriIdPart, n2.nameUriNsPart, n2.nameUriIdPart) &&
                 uriSame(n1.taxonUriNsPart, n1.taxonUriIdPart, n2.taxonUriNsPart, n2.taxonUriIdPart) &&
-                uriSame(n1.resourceUriNsPart, n1.resourceUriIdPart, n2.resourceUriNsPart, n2.resourceUriIdPart);
+                uriSame(n1.resourceUriNsPart, n1.resourceUriIdPart, n2.resourceUriNsPart, n2.resourceUriIdPart)
     }
 
     private static boolean linksLookTheSame(Link l1, Link l2) {
-        if (l1 == null && l2 == null) return true;
-        if (l1 == null || l2 == null) return false;
+        if (l1 == null && l2 == null) return true
+        if (l1 == null || l2 == null) return false
 
-        return /* l1.linkSeq == l2.linkSeq && */ uriSame(l1.typeUriNsPart, l1.typeUriIdPart, l2.typeUriNsPart, l2.typeUriIdPart);
+        return /* l1.linkSeq == l2.linkSeq && */ uriSame(l1.typeUriNsPart, l1.typeUriIdPart, l2.typeUriNsPart, l2.typeUriIdPart)
     }
 
     private static boolean uriSame(UriNs nsPart1, String idPart1, UriNs nsPart2, String idPart2) {
-        return (nsPart1 == nsPart2) && ((idPart1 ?: '') == (idPart2 ?: ''));
+        return (nsPart1 == nsPart2) && ((idPart1 ?: '') == (idPart2 ?: ''))
     }
 }

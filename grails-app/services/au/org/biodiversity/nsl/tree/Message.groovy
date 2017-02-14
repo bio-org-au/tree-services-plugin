@@ -20,6 +20,7 @@ import au.org.biodiversity.nsl.Arrangement
 import au.org.biodiversity.nsl.ArrangementType
 import au.org.biodiversity.nsl.Instance
 import au.org.biodiversity.nsl.Name
+import au.org.biodiversity.nsl.Node
 import au.org.biodiversity.nsl.Reference
 import grails.util.Holders
 import org.springframework.context.MessageSourceResolvable
@@ -147,6 +148,19 @@ class Message implements MessageSourceResolvable {
         arrangement.label ?: arrangement.arrangementType.uriId;
     }
 
+    private static String prefTitle(Node node) {
+        if(node.instance) {
+            return "${prefTitle(node.instance)} (Name #${node.instance.name.id}) in ${prefTitle(node.root)} "
+        }
+        else
+        if(node.name) {
+            return "${prefTitle(node.name)} (Name #${node.name.id}) in ${prefTitle(node.root)} "
+        }
+        else {
+            return node.typeUriIdPart ?: 'Node'
+        }
+    }
+
     public String getSpringMessage() {
         // this does the job of deciding what our domain objects ought to look like when they appear in
         def args2 = args.collect { Object it ->
@@ -165,6 +179,8 @@ class Message implements MessageSourceResolvable {
                 return "${prefTitle(it as Reference)}|${it.id}";
             } else if (it instanceof Instance) {
                 return "${prefTitle(it as Instance)}|${it.id}";
+            } else if (it instanceof Node) {
+                return "${prefTitle(it as Node)}|${it.id}";
             } else if (it.hasProperty('id')) {
                 return "${it.getClass().getSimpleName()}|${it.id}";
             } else {

@@ -21,8 +21,9 @@ import javax.sql.DataSource
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
 import org.hibernate.SessionFactory
-import au.org.biodiversity.nsl.Event;
 import spock.lang.*
+
+import java.sql.Timestamp
 
 @Mixin(BuildSampleTreeMixin)
 class QueryServiceSpec extends Specification {
@@ -31,49 +32,63 @@ class QueryServiceSpec extends Specification {
 	static final Log log = LogFactory.getLog(QueryServiceSpec.class)
 
 
-	// fields
-	BasicOperationsService basicOperationsService
-	QueryService queryService
-	
-	// fixture methods
+    // fields
+    BasicOperationsService basicOperationsService
+    QueryService queryService
 
-	def setup() {
-	}
+    // fixture methods
 
-	def cleanup() {
-	}
+    def setup() {
+    }
 
-	def setupSpec() {
-	}
+    def cleanup() {
+    }
 
-	def cleanupSpec() {
-	}
+    def setupSpec() {
+    }
 
-	// feature methods
+    def cleanupSpec() {
+    }
 
-	void "test getStatistics simple"() {
-		when:
-		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test getStatistics simple')
-		
-		SomeStuff s1 = makeSampleTree()
-		
-		QueryService.Statistics s = queryService.getStatistics(s1.t)
+    // feature methods
 
-		then:
-		s
-	}
+    void "test getStatistics simple"() {
+        when: "we get statistics"
+        basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(),
+                new Timestamp(System.currentTimeMillis()),
+                'TEST', 'test getStatistics simple')
 
-	void "test getDependencies simple"() {
-		when:
-		Event e = basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(), new java.sql.Timestamp(System.currentTimeMillis()), 'TEST', 'test getDependencies simple')
-		
-		SomeStuff s1 = makeSampleTree()
-		
-		QueryService.Statistics s = queryService.getDependencies(s1.t)
+        SomeStuff s1 = makeSampleTree()
 
-		then:
-		s
-	}
+        QueryService.Statistics s = queryService.getStatistics(s1.t)
+        println s.dump()
+
+        then: "some statics are returned"
+        s
+        s.nodesCt == 7
+        s.currentNodesCt == 7
+        s.typesCt == 2
+        s.currentTypesCt == 2
+        s.namesCt == 7
+        s.currentNamesCt == 7
+        s.taxaCt == 7
+        s.currentTaxaCt == 7
+    }
+
+    void "test getDependencies simple"() {
+        when:
+        basicOperationsService.newEventTs(TreeTestUtil.getTestNamespace(),
+                new Timestamp(System.currentTimeMillis()),
+                'TEST', 'test getDependencies simple')
+
+        SomeStuff s1 = makeSampleTree()
+
+        QueryService.Statistics s = queryService.getDependencies(s1.t)
+        println s.dump()
+
+        then:
+        s
+    }
 
 
 }
