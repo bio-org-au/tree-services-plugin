@@ -18,7 +18,6 @@ package au.org.biodiversity.nsl.tree
 
 import au.org.biodiversity.nsl.*
 import grails.transaction.Transactional
-import org.codehaus.groovy.grails.support.proxy.ProxyHandler
 import org.hibernate.SessionFactory
 
 import java.sql.Connection
@@ -33,7 +32,6 @@ class QueryService {
     static datasource = 'nsl'
 
     SessionFactory sessionFactory_nsl
-    ProxyHandler proxyHandler
 
     static class Statistics {
         public int nodesCt
@@ -130,6 +128,7 @@ class QueryService {
         }) as Statistics
     }
 
+    @SuppressWarnings("ChangeToOperator")
     private static void get_dependencies(final Arrangement r, final Statistics s, final Connection cnct) {
         withQ cnct, '''
 					select distinct n2.tree_arrangement_id
@@ -165,10 +164,12 @@ class QueryService {
         }
     }
 
+    @SuppressWarnings("GroovyUnusedDeclaration")
     void dumpTrees(Node tree1, Node tree2) {
         log.info dumpNodes([tree1, tree2])
     }
 
+    @SuppressWarnings("ChangeToOperator")
     String dumpNodes(Collection<Node> topNodes) {
 
         StringWriter out = new StringWriter()
@@ -328,6 +329,7 @@ class QueryService {
         out.toString()
     }
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     List<Link> getPathForNode(Arrangement a, Node n) {
         if (!a) throw new IllegalArgumentException("Arrangement not specified")
         if (!n) throw new IllegalArgumentException("Node not specified")
@@ -369,37 +371,13 @@ class QueryService {
         return l
     }
 
-    // find the latest parent node for the given node up to the root of
-    // the tree that is velongs to
-
-    List<Link> getLatestPathForNode(Node n) {
-        Collection<Link> path = new ArrayList<Link>()
-        for (; ;) {
-            def links = n.supLink.findAll { it.supernode.root == n.root && it.supernode.checkedInAt != null }
-
-            if (links) {
-                Link mostrecent = links.first()
-                links.each { Link it ->
-                    if (it.supernode.checkedInAt.timeStamp > mostrecent.supernode.checkedInAt.timeStamp) {
-                        mostrecent = it
-                    }
-                }
-
-                path.add(mostrecent)
-                n = mostrecent.supernode
-            } else {
-                break
-            }
-        }
-        return path
-    }
-
     Long getNextval() {
         return doWork(sessionFactory_nsl) { Connection cnct ->
             return withQresult(cnct, "select nextval('nsl_global_seq') as v") {}
         } as Long
     }
 
+    @SuppressWarnings("ChangeToOperator")
     Timestamp getTimestamp() {
         return (Timestamp) doWork(sessionFactory_nsl, { Connection cnct ->
             return withQ(cnct, '''select localtimestamp as ts''', { PreparedStatement stmt ->
@@ -482,6 +460,7 @@ and next is null
 ''', [arrangement: classification, idPart: taxonUri.idPart, namespace: taxonUri.nsPart])
     }
 
+    @SuppressWarnings("GroovyUnusedDeclaration")
     Collection<Link> findCurrentNamePlacement(Arrangement classification, Uri nameUri) {
         Link.executeQuery('''select l from Link l
 where
@@ -496,6 +475,7 @@ and subnode.next is null
 ''', [arrangement: classification, idPart: nameUri.idPart, namespace: nameUri.nsPart])
     }
 
+    @SuppressWarnings("GroovyUnusedDeclaration")
     Collection<Link> findCurrentTaxonPlacement(Arrangement classification, Uri taxonUri) {
         Link.executeQuery('''select l from Link l
 where
@@ -510,6 +490,7 @@ and subnode.next is null
 ''', [arrangement: classification, idPart: taxonUri.idPart, namespace: taxonUri.nsPart])
     }
 
+    @SuppressWarnings("GroovyUnusedDeclaration")
     Collection<Link> findCurrentNslNamePlacement(Arrangement classification, Name nslName) {
         Link.executeQuery('''select l from Link l
 where
@@ -523,6 +504,7 @@ and subnode.next is null
 ''', [arrangement: classification, nslName: nslName])
     }
 
+    @SuppressWarnings("GroovyUnusedDeclaration")
     Collection<Link> findCurrentNslInstancePlacement(Arrangement classification, Instance nslInstance) {
         Link.executeQuery('''select l from Link l
 where
@@ -536,8 +518,9 @@ and subnode.next is null
 ''', [arrangement: classification, nslInstance: nslInstance])
     }
 
+    @SuppressWarnings("ChangeToOperator")
     Link findCurrentNslNameInTreeOrBaseTree(Arrangement tree, Name name) {
-        Link l
+        Link l = null
 
         doWork sessionFactory_nsl, { Connection cnct ->
             withQ cnct, "select find_name_in_tree(?, ?) as link_id", { PreparedStatement qry ->
@@ -554,6 +537,7 @@ and subnode.next is null
     }
 
     // this query returns the relationship instances where instance.hasSynonym foo
+    @SuppressWarnings("ChangeToOperator")
     List<Instance> findSynonymsOfInstanceInTree(Arrangement tree, Instance instance) {
         List<Instance> l = new ArrayList<Instance>()
 
@@ -598,6 +582,7 @@ select distinct relationship_instance_id from walk where tree_arrangement_id = ?
         return l
     }
 
+    @SuppressWarnings("ChangeToOperator")
     List<Instance> findInstancesHavingSynonymInTree(Arrangement tree, Instance instance) {
         List<Instance> l = new ArrayList<Instance>()
 
@@ -644,6 +629,7 @@ select distinct relationship_instance_id from walk where tree_arrangement_id = ?
     }
 
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     List findNamesInSubtree(Node node, String nameLike) {
         List l = []
 
@@ -724,6 +710,7 @@ where tree_runner.running_node_id = ?
 
     }
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     List findNamesDirectlyInSubtree(Node node, String nameLike) {
 
         /**
@@ -818,6 +805,7 @@ where tree_runner.running_node_id = ?
  * thing needing to be done.
  */
 
+    @SuppressWarnings("ChangeToOperator")
     Link findNodeCurrentOrCheckedout(Node supernode, Node findNode) {
         if (!supernode) throw new IllegalArgumentException("supernode is null")
         if (!findNode) throw new IllegalArgumentException("findNode is null")
@@ -875,12 +863,13 @@ select distinct start_id from ll where supernode_id = ?
         } as Link
     }
 
+    @SuppressWarnings("ChangeToOperator")
     int countPaths(Node root, Node focus) {
         try {
             if (root == null || focus == null) return 0
             if (root == focus) return 1
 
-            int ct
+            int ct = 0
 
             doWork(sessionFactory_nsl) { Connection cnct ->
                 withQ cnct, '''
@@ -914,9 +903,10 @@ select distinct start_id from ll where supernode_id = ?
         }
     }
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     int countImmediateSubtaxa(Node n) {
-        if (n == null) return 0;
-        long ct;
+        if (n == null) return 0
+        long ct = 0
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -930,7 +920,7 @@ select distinct start_id from ll where supernode_id = ?
                         qry.setLong(1, n.id)
                         ResultSet rs = qry.executeQuery()
                         try {
-                            rs.next();
+                            rs.next()
                             ct = rs.getLong('ct')
                         }
                         finally {
@@ -940,11 +930,12 @@ select distinct start_id from ll where supernode_id = ?
                     }
         }
 
-        return ct;
+        return ct
     }
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     Map<Long, Integer> getSubtaxaCountForAllSubtaxa(Node n) {
-        Map<Long, Integer> m = new HashMap<Node, Integer>()
+        Map m = new HashMap<Long, Integer>()
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -976,6 +967,7 @@ select distinct start_id from ll where supernode_id = ?
         return m
     }
 
+    @SuppressWarnings("ChangeToOperator")
     List<Node> findPath(Node root, Node focus) {
         List<Node> l = new ArrayList<Node>()
 
@@ -1016,11 +1008,12 @@ select distinct start_id from ll where supernode_id = ?
         return l
     }
 
+    @SuppressWarnings("ChangeToOperator")
     List<Link> findPathLinks(Node root, Node focus) {
         if (!root) throw new IllegalArgumentException("root is null")
         if (!focus) throw new IllegalArgumentException("focus is null")
 
-        List<Link> l = new ArrayList<Node>()
+        List<Link> l = new ArrayList<Link>()
 
         doWork(sessionFactory_nsl) { Connection cnct ->
             withQ cnct, '''
@@ -1057,11 +1050,12 @@ select distinct start_id from ll where supernode_id = ?
         return l
     }
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     int countDraftNodes(Node focus) {
         try {
             if (focus == null) return 0
 
-            int ct
+            int ct = 0
 
             doWork(sessionFactory_nsl) { Connection cnct ->
                 withQ cnct, '''
@@ -1103,6 +1097,7 @@ select distinct start_id from ll where supernode_id = ?
      * @return
      */
 
+    @SuppressWarnings(["ChangeToOperator", "GroovyUnusedDeclaration"])
     List findDifferences(Node n1, Node n2) {
         log.debug("differences between ${n1} and ${n2}")
 
@@ -1263,192 +1258,6 @@ select distinct start_id from ll where supernode_id = ?
         return l
     }
 
-    // This method returns a branch object. A branch object contains a top node, its placements, and its entire subnode tree.
-
-    static class Tree {
-
-        class Placement {
-            public final Node node
-            public final Link link
-
-            Placement(Link link) {
-                this.link = link
-
-                if (link) {
-                    this.node = link.supernode
-                } else {
-                    this.node = null
-                }
-                map_apni_names(node)
-            }
-        }
-
-        class Branch {
-            public final Node node
-            public final Link link
-            public final Branch[] subnodes
-            public final int subnodesCount
-            public final boolean branchTruncated
-
-            Branch(Link link, Node node, int trunctateCount) {
-                this.link = link
-                this.node = node
-
-                this.subnodesCount = node.subLink.size()
-
-                int nonterminalSublinks = 0
-                node.subLink.each {
-                    if (!it.subnode.subLink.isEmpty()) {
-                        nonterminalSublinks++
-                    }
-                }
-
-                if (nonterminalSublinks != 0 && trunctateCount == 0) {
-                    branchTruncated = true
-                    subnodes = null
-                } else {
-                    branchTruncated = false
-
-                    List<Branch> bb = new ArrayList<Branch>(node.subLink.size())
-                    node.subLink.each {
-                        // the effect of this will be that if a branch has only one subnode, then
-                        // it will be followed down at least until it splits.
-                        bb.add(new Branch(it, it.subnode, (int) (trunctateCount / (nonterminalSublinks + 1))))
-                    }
-                    bb.sort { Branch a, Branch b -> return (b.link?.linkSeq ?: 0) - (a.link?.linkSeq ?: 0) }
-
-                    // it's rubbish that I have to do this
-                    this.subnodes = new Branch[bb.size()]
-                    for (int i = 0; i < bb.size(); i++) {
-                        this.subnodes[i] = bb.get(i)
-                    }
-                }
-
-                map_apni_names(node)
-            }
-        }
-
-        public final Branch branch
-        public final List<Placement> placements = []
-        public final LinkedList<Node> prev = new LinkedList<Node>()
-        public final LinkedList<Node> next = new LinkedList<Node>()
-        public final ArrayList<Node> copies = new ArrayList<Node>()
-        public final ArrayList<Node> merges = new ArrayList<Node>()
-        public final Collection<ArrayList<PlacementSpan>> paths = new ArrayList<ArrayList<PlacementSpan>>()
-        public final Map<Long, Name> nameUriMap = new HashMap<Long, Name>()
-        public final Map<Long, Instance> instanceUriMap = new HashMap<Long, Instance>()
-
-        Tree(Node node) {
-            this.branch = new Branch(null, node, 500) // an arbitrary cutoff. I should make this a config parameter
-            node.supLink.each { placements.add(new Placement(it)) }
-
-            if (!DomainUtils.isEndNode(node))
-                paths.addAll(getPlacementPaths(node))
-
-            for (Node n = node.prev; n; n = n.prev) {
-                prev.addFirst(n)
-                if (!DomainUtils.isEndNode(n))
-                    paths.addAll(getPlacementPaths(n))
-            }
-            for (Node n = node.next; n; n = n.next) {
-                next.addLast(n)
-                if (!DomainUtils.isEndNode(n))
-                    paths.addAll(getPlacementPaths(n))
-            }
-
-            mergePaths(paths)
-
-            paths.sort { ArrayList<PlacementSpan> a, ArrayList<PlacementSpan> b ->
-                if (a == b) return 0
-                if (!a && !b) return 0
-                if (!a) return -1
-                if (!b) return 1
-
-                Node a_node = a.get(0).from.supernode
-                Node b_node = b.get(0).from.supernode
-
-                if (a_node.root.id != b_node.root.id) {
-                    return a_node.root.id - b_node.root.id
-                }
-
-                if (!a_node.checkedInAt && !b_node) return 0
-                if (!a_node.checkedInAt) return 1
-                if (!b_node.checkedInAt) return -1
-
-                return a_node.checkedInAt.timeStamp.compareTo(b_node.checkedInAt.timeStamp)
-
-            }
-
-
-            for (Node n : node.branches) {
-                if (n.id != node.next?.id) {
-                    copies.add(n)
-                }
-            }
-
-            copies.sort { Node a, Node b -> sortEventsByTime(a.checkedInAt, b.checkedInAt) }
-
-            for (Node n : node.merges) {
-                if (n.id != node.prev?.id) {
-                    merges.add(n)
-                }
-            }
-
-            merges.sort { Node a, Node b -> sortEventsByTime(a.replacedAt, b.replacedAt) }
-
-
-            placements.each {
-                map_apni_names(it.node)
-            }
-            prev.each {
-                map_apni_names(it)
-            }
-            next.each {
-                map_apni_names(it)
-            }
-            copies.each {
-                map_apni_names(it)
-            }
-            merges.each {
-                map_apni_names(it)
-            }
-            paths.each {
-                it.each { PlacementSpan span ->
-                    map_apni_names(span.from.supernode)
-                    map_apni_names(span.from.subnode)
-                    map_apni_names(span.to.supernode)
-                    map_apni_names(span.to.subnode)
-                }
-            }
-        }
-
-
-        void map_apni_names(Node node) {
-            if (!node) return
-            Name resolvedName = resolveName(node)
-            if (resolvedName) {
-                nameUriMap.put(DomainUtils.getNameUri(node).asUri(), resolvedName)
-            }
-
-            Instance resolvedInstance = resolveInstance(node)
-            if (resolvedInstance) {
-                instanceUriMap.put(DomainUtils.getTaxonUri(node).asUri(), resolvedInstance)
-            }
-        }
-    }
-
-    Tree getTree(Node node) {
-        Tree t = new Tree(node)
-        return t
-    }
-
-    static class NodePair {
-        public final Node prev
-        public final Node next
-
-        NodePair(Node prev, Node next) { this.prev = prev; this.next = next }
-    }
-
     static Name resolveName(Node node) {
         if (!node) return null
         if (node.name) return node.name
@@ -1465,16 +1274,6 @@ select distinct start_id from ll where supernode_id = ?
         if (node.taxonUriNsPart.label == 'nsl-instance') return Instance.get(node.taxonUriIdPart as Long)
         if (node.taxonUriNsPart.label == 'apni-taxon') return Instance.findByNamespaceAndSourceSystemAndSourceId(node.root.namespace, 'PLANT_NAME_REFERENCE', node.taxonUriIdPart as Long)
         return null
-    }
-
-    private static int sortEventsByTime(Event a, Event b) {
-        Timestamp ts_a = a?.timeStamp
-        Timestamp ts_b = b?.timeStamp
-
-        if (!ts_b && !ts_a) return 0
-        if (ts_b && !ts_a) return 1
-        if (!ts_b && ts_a) return -1
-        return ts_a.compareTo(ts_b)
     }
 
     static class PlacementSpan {
