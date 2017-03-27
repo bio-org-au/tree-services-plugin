@@ -371,6 +371,31 @@ class QueryService {
         return l
     }
 
+    // find the latest parent node for the given node up to the root of
+    // the tree that is belongs to
+
+    List<Link> getLatestPathForNode(Node n) {
+        Collection<Link> path = new ArrayList<Link>()
+        for (; ;) {
+            def links = n.supLink.findAll { it.supernode.root == n.root && it.supernode.checkedInAt != null }
+
+            if (links) {
+                Link mostrecent = links.first()
+                links.each { Link it ->
+                    if (it.supernode.checkedInAt.timeStamp > mostrecent.supernode.checkedInAt.timeStamp) {
+                        mostrecent = it
+                    }
+                }
+
+                path.add(mostrecent)
+                n = mostrecent.supernode
+            } else {
+                break
+            }
+        }
+        return path
+    }
+
     Long getNextval() {
         return doWork(sessionFactory_nsl) { Connection cnct ->
             return withQresult(cnct, "select nextval('nsl_global_seq') as v") {}
