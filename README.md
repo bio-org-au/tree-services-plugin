@@ -1,3 +1,5 @@
+This has been moved into the services directly - and is no longer used.
+
 This is a grails plugin for the NSL project that provides the "tree" services for the classification trees. It forms
 part of the NSL services project.
 
